@@ -47,7 +47,10 @@ export function useOnboardingEntrance() {
   const speech = useSharedValue(reducedMotion ? 1 : 0);
   const subtitle = useSharedValue(reducedMotion ? 1 : 0);
   const button = useSharedValue(reducedMotion ? 1 : 0);
-  const [ready, setReady] = useState<Record<EntrancePart, boolean>>(reducedMotion ? SHOWN : HIDDEN);
+  const [animatedReady, setAnimatedReady] = useState<Record<EntrancePart, boolean>>(
+    reducedMotion ? SHOWN : HIDDEN,
+  );
+  const ready = reducedMotion ? SHOWN : animatedReady;
 
   useEffect(() => {
     if (reducedMotion) {
@@ -66,7 +69,7 @@ export function useOnboardingEntrance() {
 
     const timers = (Object.keys(DELAY) as EntrancePart[]).map((part) =>
       setTimeout(() => {
-        setReady((current) => ({ ...current, [part]: true }));
+        setAnimatedReady((current) => ({ ...current, [part]: true }));
       }, DELAY[part]),
     );
 
