@@ -3,11 +3,14 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { Fonts, Spacing } from '@/constants/theme';
+import { useAppFonts } from '@/hooks/use-app-fonts';
 import { useTheme } from '@/hooks/use-theme';
 
 export function Composer({ onSend }: { onSend: (text: string) => void }) {
   const theme = useTheme();
+  const [fontsLoaded, fontError] = useAppFonts();
+  const facesReady = fontsLoaded && fontError == null;
   const insets = useSafeAreaInsets();
   const [draft, setDraft] = useState('');
   const trimmed = draft.trim();
@@ -40,6 +43,7 @@ export function Composer({ onSend }: { onSend: (text: string) => void }) {
           styles.input,
           {
             color: theme.text,
+            fontFamily: facesReady ? Fonts.sansMedium : undefined,
             backgroundColor: theme.surface,
             borderColor: theme.borderVisible,
           },
