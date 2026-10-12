@@ -31,7 +31,8 @@ export default function RootLayout() {
     <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
       <Stack>
-        <Stack.Screen name="index" options={{ title: 'OpenCore' }}>
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="chat" options={{ title: 'OpenCore' }}>
           <Stack.Header
             style={{
               backgroundColor: colors.background,
