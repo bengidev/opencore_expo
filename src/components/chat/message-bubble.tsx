@@ -12,11 +12,17 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
   return (
     <ThemedText
       type="default"
-      themeColor={isUser ? 'onAccent' : 'text'}
+      themeColor={isUser ? 'background' : 'text'}
       style={[
         styles.bubble,
         isUser ? styles.user : styles.assistant,
-        { backgroundColor: isUser ? theme.accent : theme.backgroundElement },
+        isUser
+          ? { backgroundColor: theme.textDisplay }
+          : {
+              backgroundColor: theme.surface,
+              borderWidth: 1,
+              borderColor: theme.border,
+            },
       ]}>
       {message.text}
     </ThemedText>

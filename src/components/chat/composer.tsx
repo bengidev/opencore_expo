@@ -26,7 +26,7 @@ export function Composer({ onSend }: { onSend: (text: string) => void }) {
         styles.bar,
         {
           backgroundColor: theme.background,
-          borderTopColor: theme.backgroundSelected,
+          borderTopColor: theme.border,
           paddingBottom: Math.max(insets.bottom, Spacing.two),
         },
       ]}>
@@ -34,9 +34,16 @@ export function Composer({ onSend }: { onSend: (text: string) => void }) {
         value={draft}
         onChangeText={setDraft}
         placeholder="Tulis pesan"
-        placeholderTextColor={theme.textSecondary}
+        placeholderTextColor={theme.textDisabled}
         multiline
-        style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
+        style={[
+          styles.input,
+          {
+            color: theme.text,
+            backgroundColor: theme.surface,
+            borderColor: theme.borderVisible,
+          },
+        ]}
         accessibilityLabel="Pesan"
       />
       <Pressable
@@ -44,9 +51,15 @@ export function Composer({ onSend }: { onSend: (text: string) => void }) {
         disabled={!trimmed}
         accessibilityRole="button"
         accessibilityLabel="Kirim pesan"
-        style={[styles.send, { backgroundColor: trimmed ? theme.accent : theme.backgroundSelected }]}>
-        <ThemedText type="smallBold" themeColor={trimmed ? 'onAccent' : 'textSecondary'}>
-          Kirim
+        style={[
+          styles.send,
+          { backgroundColor: trimmed ? theme.textDisplay : 'transparent' },
+        ]}>
+        <ThemedText
+          type="code"
+          themeColor={trimmed ? 'background' : 'textDisabled'}
+          style={styles.sendLabel}>
+          KIRIM
         </ThemedText>
       </Pressable>
     </View>
@@ -58,7 +71,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: Spacing.two,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopWidth: 1,
     paddingHorizontal: Spacing.three,
     paddingTop: Spacing.two,
   },
@@ -66,6 +79,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 44,
     maxHeight: 120,
+    borderWidth: 1,
     borderRadius: Spacing.three,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
@@ -73,9 +87,14 @@ const styles = StyleSheet.create({
   },
   send: {
     minHeight: 44,
-    borderRadius: Spacing.three,
-    paddingHorizontal: Spacing.three,
+    borderRadius: 999,
+    paddingHorizontal: Spacing.four,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  sendLabel: {
+    fontSize: 13,
+    letterSpacing: 0.78,
+    fontWeight: 400,
   },
 });
