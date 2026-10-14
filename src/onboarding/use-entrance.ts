@@ -1,113 +1,148 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useWindowDimensions } from 'react-native';
 import {
   Easing,
+  ReduceMotion,
   cancelAnimation,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
   withDelay,
   withTiming,
+  type SharedValue,
 } from 'react-native-reanimated';
 
-export type EntrancePart = 'headline' | 'hero' | 'speech' | 'subtitle' | 'button';
+const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
 
-const DELAY: Record<EntrancePart, number> = {
-  headline: 0,
-  hero: 350,
-  speech: 700,
-  subtitle: 1050,
-  button: 1400,
-};
+/** Bot steps up into place. First-time only, so it can run a little past a normal UI beat. */
+const HERO_MS = 420;
+/** How far below its resting spot the bot starts, as a fraction of the window. */
+const RISE_FRACTION = 0.28;
+const RISE_MAX = 260;
+/** Close to full size. Nothing on screen should appear out of nothing. */
+const SCALE_FROM = 0.9;
+/** Opacity finishes here, while the bot is still settling into place. */
+const APPEAR_AT = 0.45;
 
-const FADE = {
-  duration: 350,
-  easing: Easing.bezier(0.25, 0.1, 0.25, 1),
-};
+const FADE_MS = 240;
+const ENTER_OFFSET = 8;
+const SPEECH_SCALE_FROM = 0.96;
 
-const HIDDEN: Record<EntrancePart, boolean> = {
-  headline: false,
-  hero: false,
-  speech: false,
-  subtitle: false,
-  button: false,
-};
+/**
+ * Chrome follows the bot. The bubble waits until the bot is mostly in place,
+ * then pops from its tail — a reply, not another row in the stagger.
+ */
+const DELAY_MS = {
+  headline: 60,
+  speech: Math.round(HERO_MS * 0.52),
+  subtitle: Math.round(HERO_MS * 0.52) + 120,
+  button: Math.round(HERO_MS * 0.52) + 170,
+} as const;
 
-const SHOWN: Record<EntrancePart, boolean> = {
-  headline: true,
-  hero: true,
-  speech: true,
-  subtitle: true,
-  button: true,
-};
+type CopyPart = keyof typeof DELAY_MS;
+
+const TIMING = {
+  duration: FADE_MS,
+  easing: EASE_OUT,
+  reduceMotion: ReduceMotion.Never,
+} as const;
+
+function useFadeUp(
+  progress: SharedValue<number>,
+  reduce: SharedValue<boolean>,
+  scaleFrom?: number,
+) {
+  return useAnimatedStyle(() => {
+    const t = progress.get();
+    const offset = reduce.get() ? 0 : (1 - t) * ENTER_OFFSET;
+    const scale =
+      scaleFrom != null && !reduce.get() ? scaleFrom + (1 - scaleFrom) * t : 1;
+    return {
+      opacity: t,
+      transform: [{ translateY: offset }, { scale }],
+    };
+  });
+}
 
 export function useOnboardingEntrance() {
   const reducedMotion = useReducedMotion();
-  const headline = useSharedValue(reducedMotion ? 1 : 0);
-  const hero = useSharedValue(reducedMotion ? 1 : 0);
-  const speech = useSharedValue(reducedMotion ? 1 : 0);
-  const subtitle = useSharedValue(reducedMotion ? 1 : 0);
-  const button = useSharedValue(reducedMotion ? 1 : 0);
-  const [animatedReady, setAnimatedReady] = useState<Record<EntrancePart, boolean>>(
-    reducedMotion ? SHOWN : HIDDEN,
-  );
-  const ready = reducedMotion ? SHOWN : animatedReady;
+  const { height: windowHeight } = useWindowDimensions();
+  const reduce = useSharedValue(reducedMotion);
+  const rise = useSharedValue(Math.min(windowHeight * RISE_FRACTION, RISE_MAX));
+  const headline = useSharedValue(0);
+  const hero = useSharedValue(0);
+  const speech = useSharedValue(0);
+  const subtitle = useSharedValue(0);
+  const button = useSharedValue(0);
 
   useEffect(() => {
+    reduce.set(reducedMotion);
+    const copy = { headline, speech, subtitle, button };
+
     if (reducedMotion) {
-      headline.value = 1;
-      hero.value = 1;
-      speech.value = 1;
-      subtitle.value = 1;
-      button.value = 1;
-      return;
+      const fade = { duration: 180, easing: EASE_OUT, reduceMotion: ReduceMotion.Never };
+      hero.set(withTiming(1, fade));
+      (Object.keys(copy) as CopyPart[]).forEach((part) => {
+        copy[part].set(withTiming(1, fade));
+      });
+    } else {
+      hero.set(withTiming(1, { duration: HERO_MS, easing: EASE_OUT, reduceMotion: ReduceMotion.Never }));
+      (Object.keys(DELAY_MS) as CopyPart[]).forEach((part) => {
+        copy[part].set(withDelay(DELAY_MS[part], withTiming(1, TIMING)));
+      });
     }
 
-    const values = { headline, hero, speech, subtitle, button };
-    (Object.keys(DELAY) as EntrancePart[]).forEach((part) => {
-      values[part].value = withDelay(DELAY[part], withTiming(1, FADE));
-    });
-
-    const timers = (Object.keys(DELAY) as EntrancePart[]).map((part) =>
-      setTimeout(() => {
-        setAnimatedReady((current) => ({ ...current, [part]: true }));
-      }, DELAY[part]),
-    );
-
     return () => {
-      timers.forEach(clearTimeout);
-      (Object.keys(values) as EntrancePart[]).forEach((part) => {
-        cancelAnimation(values[part]);
-        values[part].value = 0;
+      cancelAnimation(hero);
+      hero.set(0);
+      (Object.keys(copy) as CopyPart[]).forEach((part) => {
+        cancelAnimation(copy[part]);
+        copy[part].set(0);
       });
     };
-  }, [button, headline, hero, reducedMotion, speech, subtitle]);
+  }, [button, headline, hero, reduce, reducedMotion, speech, subtitle]);
 
-  const headlineStyle = useAnimatedStyle(() => ({ opacity: headline.value }));
-  const heroStyle = useAnimatedStyle(() => ({ opacity: hero.value }));
-  const speechStyle = useAnimatedStyle(() => ({ opacity: speech.value }));
-  const subtitleStyle = useAnimatedStyle(() => ({ opacity: subtitle.value }));
-  const buttonStyle = useAnimatedStyle(() => ({ opacity: button.value }));
+  const headlineStyle = useFadeUp(headline, reduce);
+  const heroStyle = useAnimatedStyle(() => {
+    const progress = hero.get();
+    if (reduce.get()) {
+      return {
+        opacity: progress,
+        transform: [{ translateY: 0 }, { scale: 1 }],
+      };
+    }
+    return {
+      opacity: Math.min(1, progress / APPEAR_AT),
+      transform: [
+        { translateY: (1 - progress) * rise.get() },
+        { scale: SCALE_FROM + (1 - SCALE_FROM) * progress },
+      ],
+    };
+  });
+  const speechStyle = useAnimatedStyle(() => {
+    const pop = speech.get();
+    if (reduce.get()) {
+      return {
+        opacity: pop,
+        transform: [{ translateY: 0 }, { scale: 1 }],
+      };
+    }
+    return {
+      opacity: pop,
+      transform: [
+        { translateY: (1 - hero.get()) * rise.get() },
+        { scale: SPEECH_SCALE_FROM + (1 - SPEECH_SCALE_FROM) * pop },
+      ],
+    };
+  });
+  const subtitleStyle = useFadeUp(subtitle, reduce);
+  const buttonStyle = useFadeUp(button, reduce);
 
   return {
-    headline: {
-      style: headlineStyle,
-      pointerEvents: ready.headline ? ('auto' as const) : ('none' as const),
-    },
-    hero: {
-      style: heroStyle,
-      pointerEvents: ready.hero ? ('auto' as const) : ('none' as const),
-    },
-    speech: {
-      style: speechStyle,
-      pointerEvents: ready.speech ? ('auto' as const) : ('none' as const),
-    },
-    subtitle: {
-      style: subtitleStyle,
-      pointerEvents: ready.subtitle ? ('auto' as const) : ('none' as const),
-    },
-    button: {
-      style: buttonStyle,
-      pointerEvents: ready.button ? ('auto' as const) : ('none' as const),
-    },
+    headline: headlineStyle,
+    hero: heroStyle,
+    speech: speechStyle,
+    subtitle: subtitleStyle,
+    button: buttonStyle,
   };
 }

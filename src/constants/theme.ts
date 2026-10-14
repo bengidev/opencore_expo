@@ -1,5 +1,3 @@
-import '@/global.css';
-
 export const Colors = {
   light: {
     background: '#F5F5F5',

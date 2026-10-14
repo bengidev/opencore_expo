@@ -1,3 +1,6 @@
+import '../global.css';
+
+import { PanelUIProvider } from 'panelui-native/provider';
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -28,20 +31,22 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-      <Stack>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="chat" options={{ title: 'OpenCore' }}>
-          <Stack.Header
-            style={{
-              backgroundColor: colors.background,
-              color: colors.text,
-              shadowColor: 'transparent',
-            }}
-          />
-        </Stack.Screen>
-      </Stack>
-    </ThemeProvider>
+    <PanelUIProvider background={false}>
+      <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+        <Stack>
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="chat" options={{ title: 'OpenCore' }}>
+            <Stack.Header
+              style={{
+                backgroundColor: colors.background,
+                color: colors.text,
+                shadowColor: 'transparent',
+              }}
+            />
+          </Stack.Screen>
+        </Stack>
+      </ThemeProvider>
+    </PanelUIProvider>
   );
 }
