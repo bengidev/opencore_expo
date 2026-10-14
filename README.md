@@ -2,7 +2,7 @@
 
 OpenCore is a mobile AI chatbot for Android and iOS, built with Expo and React Native.
 
-The app opens on an onboarding screen. Get started opens the conversation for that launch. Messages stay on the device for now. Assistant replies are local until a model provider is connected. Put provider keys in `.env` (see `.env.example`); that file is not committed.
+The app opens on an onboarding screen. Get started opens the conversation for that launch. Messages stay on the device for now. Assistant replies are local until a model provider is connected. This client does not load provider credentials. Expo embeds `EXPO_PUBLIC_` values in app bundles, so keep provider secrets on a server.
 
 ## Requirements
 
