@@ -34,6 +34,7 @@ export function OnboardingScreen() {
     index: 0,
     revision: 0,
     anchorFraction: 0.5,
+    autoMotionRevision: 0,
   });
   const message = ONBOARDING_SPEECH_LINES[speech.index] ?? ONBOARDING_SPEECH_LINES[0];
 
@@ -122,6 +123,7 @@ export function OnboardingScreen() {
               <OnboardingHero
                 onTap={handleHeroTap}
                 motion={heroMotion}
+                autoMotionRevision={speech.autoMotionRevision}
               />
             </Animated.View>
           </View>

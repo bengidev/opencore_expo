@@ -2,6 +2,7 @@ export type OnboardingSpeechState = {
   index: number;
   revision: number;
   anchorFraction: number;
+  autoMotionRevision: number;
 };
 
 type SpeechRotationReason = 'tap' | 'timer';
@@ -27,7 +28,9 @@ export function advanceSpeech({
     revision: state.revision + 1,
   };
 
-  if (reason === 'timer') return next;
+  if (reason === 'timer') {
+    return { ...next, autoMotionRevision: state.autoMotionRevision + 1 };
+  }
 
   const anchor = ANCHORS[Math.floor(random() * ANCHORS.length)] ?? 0.5;
   return {
