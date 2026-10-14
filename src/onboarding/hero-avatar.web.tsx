@@ -4,17 +4,20 @@ import { useReducedMotion } from 'react-native-reanimated';
 
 import { ONBOARDING_HERO_BOT, type OnboardingHeroAvatarProps } from '@/onboarding/hero-bot';
 
-export function OnboardingHeroAvatar({ size, color, ink, variant, motionLocked, motionRevision, onTap }: OnboardingHeroAvatarProps) {
+export function OnboardingHeroAvatar({ size, color, ink, variant, motionLocked, motionRevision, motionEnabled, onTap }: OnboardingHeroAvatarProps) {
   const reducedMotion = useReducedMotion();
   const avatar = useRef<HTMLCanvasElement | null>(null);
   const suppressAutomaticClick = useRef(false);
+  const lastMotionRevision = useRef(motionRevision);
 
   useEffect(() => {
-    if (motionRevision === 0 || !avatar.current) return;
+    if (motionRevision === lastMotionRevision.current) return;
+    lastMotionRevision.current = motionRevision;
+    if (!motionEnabled || motionRevision === 0 || !avatar.current) return;
     suppressAutomaticClick.current = true;
     avatar.current.click();
     suppressAutomaticClick.current = false;
-  }, [motionRevision]);
+  }, [motionEnabled, motionRevision]);
 
   return (
     <BotAvatar

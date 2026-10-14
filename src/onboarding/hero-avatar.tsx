@@ -3,15 +3,16 @@ import { BotAvatar, type BotAvatarHandle } from 'bot-avatars-native';
 
 import { ONBOARDING_HERO_BOT, type OnboardingHeroAvatarProps } from '@/onboarding/hero-bot';
 
-export function OnboardingHeroAvatar({ size, color, ink, variant, motionLocked, motion, motionRevision, onTap }: OnboardingHeroAvatarProps) {
+export function OnboardingHeroAvatar({ size, color, ink, variant, motionLocked, motion, motionRevision, motionEnabled, onTap }: OnboardingHeroAvatarProps) {
   const avatar = useRef<BotAvatarHandle | null>(null);
   const lastMotionRevision = useRef(motionRevision);
 
   useEffect(() => {
     if (motionRevision === lastMotionRevision.current) return;
     lastMotionRevision.current = motionRevision;
+    if (!motionEnabled) return;
     avatar.current?.poke();
-  }, [motionRevision]);
+  }, [motionEnabled, motionRevision]);
 
   return (
     <BotAvatar

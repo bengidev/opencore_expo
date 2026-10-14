@@ -44,6 +44,7 @@ export type OnboardingHeroAvatarProps = {
   ink: string;
   motion: SharedValue<OnboardingHeroMotion>;
   motionRevision: number;
+  motionEnabled: boolean;
   variant: OnboardingHeroVariant;
   motionLocked: boolean;
   onTap: () => void;

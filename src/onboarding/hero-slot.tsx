@@ -75,6 +75,7 @@ export function OnboardingHero({
       ink={ONBOARDING_HERO_INK}
       motion={motion}
       motionRevision={autoMotionRevision}
+      motionEnabled={!reducedMotion}
       variant={variant}
       motionLocked={motionLocked}
       onTap={handleTap}
