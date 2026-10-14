@@ -41,6 +41,7 @@ coverage/
 
 # typescript
 *.tsbuildinfo
+/uniwind-types.d.ts
 
 example
 

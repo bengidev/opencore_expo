@@ -8,6 +8,9 @@
       ],
       "@/assets/*": [
         "./assets/*"
+      ],
+      "bot-avatars-native": [
+        "./vendor/bot-avatars-native/src/index.ts"
       ]
     }
   },
