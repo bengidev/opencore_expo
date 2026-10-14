@@ -1,20 +1,27 @@
 import { StyleSheet } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
+import { ONBOARDING_FOOTNOTE } from '@/onboarding/footer-copy';
 
 export function OnboardingSubtitle() {
   return (
-    <ThemedText face="sans" themeColor="textSecondary" style={styles.subtitle}>
-      Get instant help and support with any task or problem
+    <ThemedText
+      accessibilityLabel={ONBOARDING_FOOTNOTE}
+      face="sans"
+      themeColor="textSecondary"
+      style={styles.subtitle}>
+      {ONBOARDING_FOOTNOTE}
     </ThemedText>
   );
 }
 
 const styles = StyleSheet.create({
   subtitle: {
-    fontSize: 16,
-    lineHeight: 24,
+    alignSelf: 'center',
+    maxWidth: 320,
+    fontSize: 13,
+    lineHeight: 19,
     fontWeight: 400,
-    textAlign: 'center',
+    textAlign: 'justify',
   },
 });
