@@ -37,7 +37,7 @@ export function ThemedText({ style, type = 'default', themeColor, face, ...rest 
         type === 'smallBold' && styles.smallBold,
         type === 'subtitle' && styles.subtitle,
         type === 'link' && styles.link,
-        type === 'linkPrimary' && styles.linkPrimary,
+        type === 'linkPrimary' && styles.link,
         type === 'code' && styles.code,
         facesReady && { fontFamily: Fonts[resolvedFace] },
         style,
@@ -74,11 +74,6 @@ const styles = StyleSheet.create({
     fontWeight: 400,
   },
   link: {
-    lineHeight: 30,
-    fontSize: 14,
-    fontWeight: 400,
-  },
-  linkPrimary: {
     lineHeight: 30,
     fontSize: 14,
     fontWeight: 400,
