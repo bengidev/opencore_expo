@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { Shimmer } from 'panelui-native/components/shimmer';
 import { useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { Pressable, StyleSheet, Text } from 'react-native';
 import Animated, { cubicBezier, useReducedMotion } from 'react-native-reanimated';
 
 import { Fonts } from '@/constants/theme';
@@ -9,7 +9,13 @@ import { useTheme } from '@/hooks/use-theme';
 
 const PRESS_EASE = cubicBezier(0.23, 1, 0.32, 1);
 
-export function OnboardingStartButton({ onPress }: { onPress: () => void }) {
+export function OnboardingStartButton({
+  onPress,
+  enableShimmer = true,
+}: {
+  onPress: () => void;
+  enableShimmer?: boolean;
+}) {
   const theme = useTheme();
   const reducedMotion = useReducedMotion();
   const [pressed, setPressed] = useState(false);
@@ -43,14 +49,18 @@ export function OnboardingStartButton({ onPress }: { onPress: () => void }) {
                 transform: [{ scale: pressed ? 0.97 : 1 }],
               },
         ]}>
-        <Shimmer
-          as="text"
-          className="text-muted-foreground text-foreground"
-          baseColor={theme.textDisabled}
-          shimmerColor={theme.background}
-          textStyle={styles.label}>
-          GET STARTED →
-        </Shimmer>
+        {enableShimmer ? (
+          <Shimmer
+            as="text"
+            className="text-muted-foreground text-foreground"
+            baseColor={theme.textDisabled}
+            shimmerColor={theme.background}
+            textStyle={styles.label}>
+            GET STARTED →
+          </Shimmer>
+        ) : (
+          <Text style={[styles.label, { color: theme.background }]}>GET STARTED →</Text>
+        )}
       </Animated.View>
     </Pressable>
   );
