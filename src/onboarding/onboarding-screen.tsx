@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
+import { PanelUIProvider } from 'panelui-native/provider';
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -22,6 +23,8 @@ import { useOnboardingEntrance } from '@/onboarding/use-entrance';
 import { advanceSpeech, type OnboardingSpeechState } from '@/onboarding/speech-rotation';
 
 const SPEECH_ROTATION_DELAY_MS = 5000;
+
+const isStaticWebRender = Platform.OS === 'web' && typeof window === 'undefined';
 
 export function OnboardingScreen() {
   const insets = useSafeAreaInsets();
@@ -68,16 +71,16 @@ export function OnboardingScreen() {
     setSpeech((current) => advanceSpeech({ state: current, reason: 'tap', lines: ONBOARDING_SPEECH_LINES }));
   };
 
-  return (
-    <ThemedView style={styles.screen}>
-      <View
-        style={[
-          styles.column,
-          {
-            paddingTop: insets.top + Spacing.five,
-            paddingBottom: Math.max(insets.bottom, Spacing.four),
-          },
-        ]}>
+  const content = (
+      <ThemedView style={styles.screen}>
+        <View
+          style={[
+            styles.column,
+            {
+              paddingTop: insets.top + Spacing.five,
+              paddingBottom: Math.max(insets.bottom, Spacing.four),
+            },
+          ]}>
         <Animated.View style={entrance.headline}>
           <OnboardingHeadline />
         </Animated.View>
@@ -132,11 +135,20 @@ export function OnboardingScreen() {
           <OnboardingSubtitle />
         </Animated.View>
         <Animated.View style={entrance.button}>
-          <OnboardingStartButton onPress={() => router.replace('/chat')} />
+          <OnboardingStartButton
+            enableShimmer={!isStaticWebRender}
+            onPress={() => router.replace('/chat')}
+          />
         </Animated.View>
-      </View>
-    </ThemedView>
+        </View>
+      </ThemedView>
   );
+
+  if (isStaticWebRender) {
+    return content;
+  }
+
+  return <PanelUIProvider background={false}>{content}</PanelUIProvider>;
 }
 
 const styles = StyleSheet.create({
