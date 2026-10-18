@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { PanelUIProvider } from 'panelui-native/provider';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedView } from '@/components/themed-view';
@@ -9,18 +9,10 @@ import { Spacing } from '@/constants/theme';
 import { HOME_SPEECH_LINES } from '@/home/home-content';
 import { HomeComposer } from '@/home/home-composer';
 import { HomeGreeting } from '@/home/home-greeting';
-import { HomeHeader } from '@/home/home-header';
 import { SuggestionCarousel } from '@/home/suggestion-carousel';
 import { HeroInteractionStage } from '@/onboarding/hero-interaction-stage';
 
 const isStaticWebRender = Platform.OS === 'web' && typeof window === 'undefined';
-
-function openHomeMenu() {
-  Alert.alert('OpenCore', undefined, [
-    { text: 'Chat', onPress: () => router.push('/chat') },
-    { text: 'Cancel', style: 'cancel' },
-  ]);
-}
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -51,7 +43,6 @@ export function HomeScreen() {
               paddingBottom: Math.max(insets.bottom, Spacing.three),
             },
           ]}>
-          <HomeHeader onMenuPress={openHomeMenu} />
           <HomeGreeting />
           <HeroInteractionStage speechLines={HOME_SPEECH_LINES} stageStyle={styles.heroStage} />
           <View style={styles.bottom}>
