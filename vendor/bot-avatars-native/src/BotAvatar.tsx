@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { PixelRatio, View, type GestureResponderEvent, type ViewInstance } from 'react-native';
+import { PixelRatio, Platform, View, type GestureResponderEvent, type ViewInstance } from 'react-native';
 import { Canvas, Picture, Skia } from '@shopify/react-native-skia';
 import { runOnUI, useDerivedValue, useReducedMotion, useSharedValue } from 'react-native-reanimated';
 import { BotAvatarSim, autoInk, botAvatarPresets, restPose, shade, type BotAvatarPose, type BotAvatarShading, type BotAvatarState } from 'bot-avatars';
@@ -150,14 +150,17 @@ export const BotAvatar = forwardRef<BotAvatarHandle, BotAvatarProps>(function Bo
   useMemo(() => pushStill(slot, (buf, off) => pack(buf, off, restPose(stateKey))), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const rect = useMemo(() => ({ x: 0, y: 0, width: size * OVERSCAN, height: size * OVERSCAN }), [size]);
-  const picture = useDerivedValue(() => {
-    const pk = new Float32Array(packed.value);
-    const off = slot * STRIDE;
-    const rec = Skia.PictureRecorder();
-    const c = rec.beginRecording(rect);
-    if (pk.length >= off + STRIDE) drawBotAvatarFrame(c, size, pk, off, cfgSV.value, resSV.value, key);
-    return rec.finishRecordingAsPicture();
-  }, [slot, size, key, rect]);
+  const picture = useDerivedValue(
+    () => {
+      const pk = new Float32Array(packed.value);
+      const off = slot * STRIDE;
+      const rec = Skia.PictureRecorder();
+      const c = rec.beginRecording(rect);
+      if (pk.length >= off + STRIDE) drawBotAvatarFrame(c, size, pk, off, cfgSV.value, resSV.value, key);
+      return rec.finishRecordingAsPicture();
+    },
+    Platform.OS === 'web' ? [slot, size, key, rect] : undefined,
+  );
 
   useLayoutEffect(() => {
     sim.setState(stateKey);
