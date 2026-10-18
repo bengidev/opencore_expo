@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import type { TextLayoutEvent } from 'react-native';
 
 import { ThemedText, type ThemedTextProps } from '@/components/themed-text';
@@ -36,12 +36,13 @@ export function AutoFitText({
   themeColor = 'text',
   style,
 }: AutoFitTextProps) {
-  const [fontSize, setFontSize] = useState(maxFontSize);
+  const contentKey = `${children}|${maxFontSize}|${maxWidth}|${maxHeight}`;
+  const [fitState, setFitState] = useState({ key: contentKey, fontSize: maxFontSize });
+  if (fitState.key !== contentKey) {
+    setFitState({ key: contentKey, fontSize: maxFontSize });
+  }
+  const fontSize = fitState.key === contentKey ? fitState.fontSize : maxFontSize;
   const ratio = lineHeightRatio(variant);
-
-  useEffect(() => {
-    setFontSize(maxFontSize);
-  }, [children, maxFontSize, maxWidth, maxHeight]);
 
   const onTextLayout = useCallback(
     (event: TextLayoutEvent) => {
@@ -56,10 +57,13 @@ export function AutoFitText({
       const heightOverflow = totalHeight > maxHeight + 0.5;
 
       if ((widthOverflow || heightOverflow) && fontSize > minFontSize) {
-        setFontSize((size) => Math.max(minFontSize, size - 0.5));
+        setFitState((current) => ({
+          key: contentKey,
+          fontSize: Math.max(minFontSize, current.fontSize - 0.5),
+        }));
       }
     },
-    [fontSize, maxHeight, maxWidth, minFontSize],
+    [contentKey, fontSize, maxHeight, maxWidth, minFontSize],
   );
 
   const letterSpacing =

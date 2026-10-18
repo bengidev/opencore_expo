@@ -1,21 +1,13 @@
 import * as Haptics from 'expo-haptics';
+import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { cubicBezier, useReducedMotion } from 'react-native-reanimated';
 
 import { AppIcon } from '@/components/app-icon';
 import { AppMetalFx } from '@/components/app-metal-fx';
 import { useTheme } from '@/hooks/use-theme';
 
-/** Strong ease-out (Emil Kowalski / easing.dev style punch). */
-const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
-const PRESS_IN_MS = 140;
-const PRESS_OUT_MS = 120;
+const PRESS_EASE = cubicBezier(0.23, 1, 0.32, 1);
 const PRESS_SCALE = 0.97;
 const ORB_SIZE = 36;
 const ORB_RADIUS = 18;
@@ -29,39 +21,29 @@ type ComposerSendButtonProps = {
 export function ComposerSendButton({ enabled, metalActive, onPress }: ComposerSendButtonProps) {
   const theme = useTheme();
   const reducedMotion = useReducedMotion();
-  const scale = useSharedValue(1);
-  const pressOpacity = useSharedValue(1);
-
+  const [pressed, setPressed] = useState(false);
   const fill = enabled ? theme.textDisplay : theme.borderVisible;
   const iconColor = enabled ? theme.background : theme.textDisabled;
-
-  const animatedShell = useAnimatedStyle(() => {
-    if (reducedMotion) {
-      return { opacity: pressOpacity.value };
-    }
-    return { transform: [{ scale: scale.value }] };
-  });
-
-  function onPressIn() {
-    if (!enabled) return;
-    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    if (reducedMotion) {
-      pressOpacity.value = withTiming(0.72, { duration: 100, easing: EASE_OUT });
-      return;
-    }
-    scale.value = withTiming(PRESS_SCALE, { duration: PRESS_IN_MS, easing: EASE_OUT });
-  }
-
-  function onPressOut() {
-    if (reducedMotion) {
-      pressOpacity.value = withTiming(1, { duration: 140, easing: EASE_OUT });
-      return;
-    }
-    scale.value = withTiming(1, { duration: PRESS_OUT_MS, easing: EASE_OUT });
-  }
+  const isPressed = pressed && enabled;
 
   return (
-    <Animated.View style={[styles.shell, animatedShell]}>
+    <Animated.View
+      style={[
+        styles.shell,
+        reducedMotion
+          ? {
+              transitionProperty: 'opacity',
+              transitionDuration: 120,
+              transitionTimingFunction: PRESS_EASE,
+              opacity: isPressed ? 0.72 : 1,
+            }
+          : {
+              transitionProperty: 'transform',
+              transitionDuration: isPressed ? 140 : 120,
+              transitionTimingFunction: PRESS_EASE,
+              transform: [{ scale: isPressed ? PRESS_SCALE : 1 }],
+            },
+      ]}>
       <AppMetalFx
         variant="circle"
         cornerRadius={ORB_RADIUS}
@@ -76,8 +58,12 @@ export function ComposerSendButton({ enabled, metalActive, onPress }: ComposerSe
           accessibilityState={{ disabled: !enabled }}
           disabled={!enabled}
           onPress={onPress}
-          onPressIn={onPressIn}
-          onPressOut={onPressOut}
+          onPressIn={() => {
+            if (!enabled) return;
+            setPressed(true);
+            void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+          }}
+          onPressOut={() => setPressed(false)}
           hitSlop={6}
           style={styles.sendHit}>
           <View style={[styles.sendOrb, { backgroundColor: fill }]}>
