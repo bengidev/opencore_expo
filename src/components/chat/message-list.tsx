@@ -1,21 +1,31 @@
-import { useRef } from 'react';
-import { FlatList, StyleSheet, type ListRenderItem } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { StyleSheet, type ListRenderItem } from 'react-native';
+import Animated from 'react-native-reanimated';
 
-import { MessageBubble } from '@/components/chat/message-bubble';
+import { CHAT_BUBBLE_LAYOUT, MessageBubble } from '@/components/chat/message-bubble';
 import { Spacing } from '@/constants/theme';
 import type { ChatMessage } from '@/types/chat';
 
 export function MessageList({ messages }: { messages: ChatMessage[] }) {
-  const listRef = useRef<FlatList<ChatMessage>>(null);
+  const listRef = useRef<Animated.FlatList<ChatMessage>>(null);
 
   const renderItem: ListRenderItem<ChatMessage> = ({ item }) => <MessageBubble message={item} />;
 
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      listRef.current?.scrollToEnd({ animated: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [messages.length]);
+
   return (
-    <FlatList
+    <Animated.FlatList
       ref={listRef}
+      style={styles.list}
       data={messages}
       keyExtractor={(item) => item.id}
       renderItem={renderItem}
+      itemLayoutAnimation={CHAT_BUBBLE_LAYOUT}
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
       onContentSizeChange={() => {
@@ -26,11 +36,15 @@ export function MessageList({ messages }: { messages: ChatMessage[] }) {
 }
 
 const styles = StyleSheet.create({
+  list: {
+    flex: 1,
+  },
   content: {
     flexGrow: 1,
     justifyContent: 'flex-end',
     gap: Spacing.two,
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.three,
+    paddingTop: Spacing.three,
+    paddingBottom: Spacing.four,
   },
 });
