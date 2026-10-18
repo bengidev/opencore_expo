@@ -1,7 +1,7 @@
 import { Button, Icon } from '@expo/ui';
 import { MenuView } from '@expo/ui/community/menu';
 import { router } from 'expo-router';
-import { StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 
 import { ExpoUiHost } from '@/components/expo-ui-host';
 import { HOME_SYMBOLS } from '@/home/home-symbols';
@@ -33,7 +33,16 @@ export function HomeHeaderMenu() {
     <View style={styles.slot}>
       <MenuView
         actions={MENU_ACTIONS}
-        onPressAction={() => {}}
+        onPressAction={({ nativeEvent }) => {
+          const id = nativeEvent.event;
+          if (id === 'history') {
+            router.push('/chat');
+            return;
+          }
+          if (id === 'settings') {
+            Alert.alert('Settings', 'Settings will be available soon.');
+          }
+        }}
         testID="home-menu">
         <ExpoUiHost>
           <Button variant="text" testID="home-menu-trigger" style={styles.iconButton}>

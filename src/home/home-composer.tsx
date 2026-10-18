@@ -20,7 +20,7 @@ import { useTheme } from '@/hooks/use-theme';
 type HomeComposerProps = {
   draft: string;
   onChangeDraft: (value: string) => void;
-  onSubmit: () => void;
+  onSubmit: (message: string) => void;
 };
 
 export function HomeComposer({ draft, onChangeDraft, onSubmit }: HomeComposerProps) {
@@ -42,7 +42,7 @@ export function HomeComposer({ draft, onChangeDraft, onSubmit }: HomeComposerPro
   function handleSend() {
     if (!trimmed) return;
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    onSubmit();
+    onSubmit(trimmed);
   }
 
   return (
