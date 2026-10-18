@@ -2,6 +2,10 @@
 /**
  * react-native-skia 2.x: SkPath from Path.Make() is immutable.
  * metal-fx-native 0.1.0 must use PathBuilder for drawing ops.
+ *
+ * Runs on every `npm install` via package.json postinstall. Re-run after upgrading
+ * metal-fx-native or @shopify/react-native-skia. Prefer repacking vendor/*.tgz when
+ * upstream ships a fix so this patch can be removed.
  */
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
