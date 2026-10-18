@@ -6,7 +6,7 @@
    layers, eighteen avatars go from about 30 fps to 60 with it. */
 
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react';
-import { View, type LayoutChangeEvent, type StyleProp, type ViewStyle } from 'react-native';
+import { View, type LayoutChangeEvent, type StyleProp, type ViewInstance, type ViewStyle } from 'react-native';
 import { Canvas, Picture, type SkPicture } from '@shopify/react-native-skia';
 import type { SharedValue } from 'react-native-reanimated';
 import { OVERSCAN, RISE } from './packet';
@@ -21,7 +21,7 @@ interface Entry {
 }
 
 export interface SheetApi {
-  ref: RefObject<View | null>;
+  ref: RefObject<ViewInstance | null>;
   register(key: string, picture: SharedValue<SkPicture>, size: number): void;
   place(key: string, x: number, y: number): void;
   unregister(key: string): void;
@@ -36,7 +36,7 @@ export interface BotAvatarSheetProps {
 }
 
 export function BotAvatarSheet({ children, style }: BotAvatarSheetProps) {
-  const ref = useRef<View>(null);
+  const ref = useRef<ViewInstance>(null);
   const [entries, setEntries] = useState<Record<string, Entry>>({});
   const [box, setBox] = useState({ width: 0, height: 0 });
   const onLayout = useCallback((e: LayoutChangeEvent) => {

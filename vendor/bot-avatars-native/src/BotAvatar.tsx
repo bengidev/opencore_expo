@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useId, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { PixelRatio, View, type GestureResponderEvent } from 'react-native';
+import { PixelRatio, View, type GestureResponderEvent, type ViewInstance } from 'react-native';
 import { Canvas, Picture, Skia } from '@shopify/react-native-skia';
 import { runOnUI, useDerivedValue, useReducedMotion, useSharedValue } from 'react-native-reanimated';
 import { BotAvatarSim, autoInk, botAvatarPresets, restPose, shade, type BotAvatarPose, type BotAvatarShading, type BotAvatarState } from 'bot-avatars';
@@ -221,7 +221,7 @@ export const BotAvatar = forwardRef<BotAvatarHandle, BotAvatarProps>(function Bo
   }, [sheet, key, picture, size]);
 
   /* touch play: a finger on the avatar is the pointer; a tap is a poke */
-  const viewRef = useRef<View>(null);
+  const viewRef = useRef<ViewInstance>(null);
   const origin = useRef({ x: 0, y: 0 });
   const touch = useRef({ x: 0, y: 0, t: 0, moved: false });
   const REACH = 3;
@@ -235,9 +235,9 @@ export const BotAvatar = forwardRef<BotAvatarHandle, BotAvatarProps>(function Bo
     pointerAt((e.nativeEvent.locationX - size / 2) / size, (e.nativeEvent.locationY - size / 2) / size);
   };
   const measure = () => {
-    viewRef.current?.measureInWindow((x, y) => (origin.current = { x, y }));
+    viewRef.current?.measureInWindow((x: number, y: number) => (origin.current = { x, y }));
     const host = sheet?.ref.current;
-    if (sheet && host && viewRef.current) viewRef.current.measureLayout(host, (x, y) => sheet.place(key, x, y));
+    if (sheet && host && viewRef.current) viewRef.current.measureLayout(host, (x: number, y: number) => sheet.place(key, x, y));
   };
 
   useImperativeHandle(
