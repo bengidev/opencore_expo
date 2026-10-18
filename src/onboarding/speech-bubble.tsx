@@ -75,7 +75,7 @@ export function OnboardingSpeech({
           maxWidth,
         },
       ]}>
-      <ThemedText face="sans" themeColor="text" style={styles.label}>
+      <ThemedText variant="body" face="sans" themeColor="text">
         {words.slice(0, visibleCount).map((word, index) => (
           <Animated.Text key={`${revision}-${index}`} entering={WORD_ENTER}>
             {`${index === 0 ? '' : ' '}${word}`}
@@ -97,11 +97,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 8,
-  },
-  label: {
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: 400,
   },
   tailBorder: {
     position: 'absolute',
