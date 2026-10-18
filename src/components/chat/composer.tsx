@@ -3,14 +3,14 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { Fonts, Spacing } from '@/constants/theme';
-import { useAppFonts } from '@/hooks/use-app-fonts';
+import { Typography } from '@/constants/typography';
+import { Spacing } from '@/constants/theme';
+import { useFontFamily } from '@/hooks/use-font-family';
 import { useTheme } from '@/hooks/use-theme';
 
 export function Composer({ onSend }: { onSend: (text: string) => void }) {
   const theme = useTheme();
-  const [fontsLoaded, fontError] = useAppFonts();
-  const facesReady = fontsLoaded && fontError == null;
+  const sans = useFontFamily('sans');
   const insets = useSafeAreaInsets();
   const [draft, setDraft] = useState('');
   const trimmed = draft.trim();
@@ -41,9 +41,10 @@ export function Composer({ onSend }: { onSend: (text: string) => void }) {
         multiline
         style={[
           styles.input,
+          Typography.body,
           {
             color: theme.text,
-            fontFamily: facesReady ? Fonts.sansMedium : undefined,
+            fontFamily: sans,
             backgroundColor: theme.surface,
             borderColor: theme.borderVisible,
           },
@@ -59,10 +60,7 @@ export function Composer({ onSend }: { onSend: (text: string) => void }) {
           styles.send,
           { backgroundColor: trimmed ? theme.textDisplay : 'transparent' },
         ]}>
-        <ThemedText
-          type="code"
-          themeColor={trimmed ? 'background' : 'textDisabled'}
-          style={styles.sendLabel}>
+        <ThemedText variant="controlLabel" themeColor={trimmed ? 'background' : 'textDisabled'}>
           KIRIM
         </ThemedText>
       </Pressable>
@@ -87,7 +85,6 @@ const styles = StyleSheet.create({
     borderRadius: Spacing.three,
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
-    fontSize: 16,
   },
   send: {
     minHeight: 44,
@@ -95,10 +92,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.four,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  sendLabel: {
-    fontSize: 13,
-    letterSpacing: 0.78,
-    fontWeight: 400,
   },
 });
