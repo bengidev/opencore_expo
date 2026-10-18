@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import Animated, { cubicBezier, useReducedMotion } from 'react-native-reanimated';
 
-import { Fonts } from '@/constants/theme';
+import { Typography } from '@/constants/typography';
+import { useFontFamily } from '@/hooks/use-font-family';
 import { useTheme } from '@/hooks/use-theme';
 
 const PRESS_EASE = cubicBezier(0.23, 1, 0.32, 1);
@@ -17,8 +18,10 @@ export function OnboardingStartButton({
   enableShimmer?: boolean;
 }) {
   const theme = useTheme();
+  const mono = useFontFamily('mono');
   const reducedMotion = useReducedMotion();
   const [pressed, setPressed] = useState(false);
+  const labelStyle = [Typography.controlLabel, mono ? { fontFamily: mono } : null];
 
   return (
     <Pressable
@@ -55,11 +58,11 @@ export function OnboardingStartButton({
             className="text-muted-foreground text-foreground"
             baseColor={theme.textDisabled}
             shimmerColor={theme.background}
-            textStyle={styles.label}>
+            textStyle={labelStyle}>
             GET STARTED →
           </Shimmer>
         ) : (
-          <Text style={[styles.label, { color: theme.background }]}>GET STARTED →</Text>
+          <Text style={[labelStyle, { color: theme.background }]}>GET STARTED →</Text>
         )}
       </Animated.View>
     </Pressable>
@@ -74,12 +77,5 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  label: {
-    fontFamily: Fonts.mono,
-    fontSize: 13,
-    lineHeight: 16,
-    letterSpacing: 0.78,
-    fontWeight: 400,
   },
 });

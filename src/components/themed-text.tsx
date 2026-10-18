@@ -1,16 +1,71 @@
-import { StyleSheet, Text, type TextProps } from 'react-native';
+import { StyleSheet, Text, type TextProps, type TextStyle } from 'react-native';
 
-import { Fonts, ThemeColor } from '@/constants/theme';
+import { Fonts, ThemeColor, type FontRole } from '@/constants/theme';
+import { Typography, type TypographyVariant, variantFace } from '@/constants/typography';
 import { useAppFonts } from '@/hooks/use-app-fonts';
 import { useTheme } from '@/hooks/use-theme';
 
+export type ThemedTextType =
+  | 'default'
+  | 'title'
+  | 'small'
+  | 'smallBold'
+  | 'subtitle'
+  | 'link'
+  | 'linkPrimary'
+  | 'code';
+
 export type ThemedTextProps = TextProps & {
-  type?: 'default' | 'title' | 'small' | 'smallBold' | 'subtitle' | 'link' | 'linkPrimary' | 'code';
+  type?: ThemedTextType;
+  variant?: TypographyVariant;
   themeColor?: ThemeColor;
-  face?: 'sans' | 'sansMedium' | 'mono';
+  face?: FontRole;
 };
 
-function faceFor(type: NonNullable<ThemedTextProps['type']>): NonNullable<ThemedTextProps['face']> {
+/** Legacy `type` styles — kept for backward-compatible call sites. */
+const legacyTypeStyles = StyleSheet.create({
+  default: {
+    fontSize: 16,
+    lineHeight: 24,
+    fontWeight: '400',
+  },
+  title: {
+    fontSize: 48,
+    fontWeight: '400',
+    lineHeight: 52,
+  },
+  small: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '400',
+  },
+  smallBold: {
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: '400',
+  },
+  subtitle: {
+    fontSize: 32,
+    lineHeight: 44,
+    fontWeight: '400',
+  },
+  link: {
+    lineHeight: 30,
+    fontSize: 14,
+    fontWeight: '400',
+  },
+  linkPrimary: {
+    lineHeight: 30,
+    fontSize: 14,
+    fontWeight: '400',
+  },
+  code: {
+    fontWeight: '400',
+    fontSize: 12,
+  },
+});
+
+function legacyFaceFor(type: ThemedTextType): FontRole {
   if (type === 'code') {
     return 'mono';
   }
@@ -20,25 +75,36 @@ function faceFor(type: NonNullable<ThemedTextProps['type']>): NonNullable<Themed
   return 'sansMedium';
 }
 
-export function ThemedText({ style, type = 'default', themeColor, face, ...rest }: ThemedTextProps) {
+export function ThemedText({
+  style,
+  type = 'default',
+  variant,
+  themeColor,
+  face,
+  ...rest
+}: ThemedTextProps) {
   const theme = useTheme();
   const [loaded, error] = useAppFonts();
   const facesReady = loaded && error == null;
+  const usesVariant = variant != null;
   const color = theme[themeColor ?? (type === 'linkPrimary' ? 'interactive' : 'text')];
-  const resolvedFace = face ?? faceFor(type);
+
+  let metricStyle: TextStyle;
+  let resolvedFace: FontRole;
+
+  if (usesVariant) {
+    metricStyle = Typography[variant];
+    resolvedFace = face ?? variantFace(variant);
+  } else {
+    metricStyle = legacyTypeStyles[type];
+    resolvedFace = face ?? legacyFaceFor(type);
+  }
 
   return (
     <Text
       style={[
         { color },
-        type === 'default' && styles.default,
-        type === 'title' && styles.title,
-        type === 'small' && styles.small,
-        type === 'smallBold' && styles.smallBold,
-        type === 'subtitle' && styles.subtitle,
-        type === 'link' && styles.link,
-        type === 'linkPrimary' && styles.link,
-        type === 'code' && styles.code,
+        metricStyle,
         facesReady && { fontFamily: Fonts[resolvedFace] },
         style,
       ]}
@@ -46,40 +112,3 @@ export function ThemedText({ style, type = 'default', themeColor, face, ...rest 
     />
   );
 }
-
-const styles = StyleSheet.create({
-  small: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: 400,
-  },
-  smallBold: {
-    fontSize: 14,
-    lineHeight: 20,
-    fontWeight: 400,
-  },
-  default: {
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: 400,
-  },
-  title: {
-    fontSize: 48,
-    fontWeight: 400,
-    lineHeight: 52,
-  },
-  subtitle: {
-    fontSize: 32,
-    lineHeight: 44,
-    fontWeight: 400,
-  },
-  link: {
-    lineHeight: 30,
-    fontSize: 14,
-    fontWeight: 400,
-  },
-  code: {
-    fontWeight: 400,
-    fontSize: 12,
-  },
-});

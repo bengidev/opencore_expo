@@ -3,11 +3,16 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
+    "@expo-google-fonts/doto": "^0.4.1",
     "@expo-google-fonts/space-grotesk": "^0.4.1",
     "@expo-google-fonts/space-mono": "^0.4.2",
+    "@expo/material-symbols": "^0.1.1",
     "@expo/ui": "~58.0.20",
+    "@expo/vector-icons": "^15.0.2",
     "@react-native-masked-view/masked-view": "0.3.2",
     "@shopify/react-native-skia": "2.14.0",
+    "border-beam": "^1.4.1",
+    "border-beam-native": "file:vendor/border-beam-native-0.1.0.tgz",
     "bot-avatars": "^0.2.2",
     "expo": "~58.0.14",
     "expo-constants": "~58.0.12",
@@ -25,6 +30,8 @@
     "expo-symbols": "~58.0.4",
     "expo-system-ui": "~58.0.6",
     "expo-web-browser": "~58.0.6",
+    "metal-fx": "^2.0.11",
+    "metal-fx-native": "file:vendor/metal-fx-native-0.1.0.tgz",
     "panelui-native": "^0.109.0",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -47,6 +54,7 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
+    "postinstall": "node scripts/ensure-metal-fx-native-skia2.mjs",
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",

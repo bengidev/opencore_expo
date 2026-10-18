@@ -12,4 +12,7 @@
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace;
   --font-rounded: 'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif;
   --font-serif: Georgia, 'Times New Roman', serif;
+  /* Native Nothing stack (Expo Google Fonts) — does not override Panel UI web tokens above. */
+  --opencore-font-display: Doto, 'Space Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --opencore-font-sans: 'Space Grotesk', 'DM Sans', system-ui, sans-serif;
 }
