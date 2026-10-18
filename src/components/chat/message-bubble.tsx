@@ -11,7 +11,7 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
 
   return (
     <ThemedText
-      variant="body"
+      type="default"
       themeColor={isUser ? 'background' : 'text'}
       style={[
         styles.bubble,

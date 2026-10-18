@@ -3,14 +3,14 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
-import { Typography } from '@/constants/typography';
 import { Spacing } from '@/constants/theme';
+import { Typography } from '@/constants/typography';
 import { useFontFamily } from '@/hooks/use-font-family';
 import { useTheme } from '@/hooks/use-theme';
 
 export function Composer({ onSend }: { onSend: (text: string) => void }) {
   const theme = useTheme();
-  const sans = useFontFamily('sans');
+  const sans = useFontFamily('sansMedium');
   const insets = useSafeAreaInsets();
   const [draft, setDraft] = useState('');
   const trimmed = draft.trim();
@@ -60,7 +60,7 @@ export function Composer({ onSend }: { onSend: (text: string) => void }) {
           styles.send,
           { backgroundColor: trimmed ? theme.textDisplay : 'transparent' },
         ]}>
-        <ThemedText variant="controlLabel" themeColor={trimmed ? 'background' : 'textDisabled'}>
+        <ThemedText type="code" themeColor={trimmed ? 'background' : 'textDisabled'}>
           KIRIM
         </ThemedText>
       </Pressable>

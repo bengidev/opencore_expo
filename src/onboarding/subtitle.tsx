@@ -7,8 +7,7 @@ export function OnboardingSubtitle() {
   return (
     <ThemedText
       accessibilityLabel={ONBOARDING_FOOTNOTE}
-      variant="bodySm"
-      face="sans"
+      type="default"
       themeColor="textSecondary"
       style={styles.subtitle}>
       {ONBOARDING_FOOTNOTE}
@@ -20,6 +19,8 @@ const styles = StyleSheet.create({
   subtitle: {
     alignSelf: 'center',
     maxWidth: 320,
+    fontSize: 13,
+    lineHeight: 19,
     textAlign: 'justify',
   },
 });
