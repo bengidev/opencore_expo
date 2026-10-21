@@ -1,7 +1,8 @@
+import { router } from 'expo-router';
 import { GlassContainer } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
-import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
 import { AppBorderBeam } from '@/components/app-border-beam';
@@ -11,7 +12,8 @@ import { ThemedText } from '@/components/themed-text';
 import { Typography } from '@/constants/typography';
 import { BoxShadow, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { ComposerAttachmentMenu } from '@/home/composer-attachment-menu';
+import { buildComposerActionGroups, type ComposerActionItem } from '@/home/composer-actions';
+import { ComposerActionsPopover } from '@/home/composer-actions-popover';
 import { ComposerSendButton } from '@/home/composer-send-button';
 import { HOME_MODELS } from '@/home/home-content';
 import { useFontFamily } from '@/hooks/use-font-family';
@@ -33,10 +35,36 @@ export function HomeComposer({ draft, onChangeDraft, onSubmit }: HomeComposerPro
   const trimmed = draft.trim();
   const modelLabel = HOME_MODELS[modelIndex] ?? HOME_MODELS[0];
   const iosGlass = useIosLiquidGlass();
+  const actionGroups = useMemo(() => buildComposerActionGroups(), []);
 
   function cycleModel() {
     setModelIndex((current) => (current + 1) % HOME_MODELS.length);
     void Haptics.selectionAsync().catch(() => {});
+  }
+
+  function handleActionSelect(item: ComposerActionItem) {
+    if (item.kind === 'model') {
+      const index = HOME_MODELS.findIndex((name) => name === item.title);
+      if (index >= 0) setModelIndex(index);
+      return;
+    }
+
+    switch (item.id) {
+      case 'action:camera':
+      case 'action:gallery':
+      case 'action:files':
+        void Haptics.selectionAsync().catch(() => {});
+        Alert.alert(item.title, `${item.title} will be available soon.`);
+        return;
+      case 'action:clear-input':
+        onChangeDraft('');
+        return;
+      case 'action:new-chat':
+        router.push('/chat');
+        return;
+      default:
+        return;
+    }
   }
 
   function handleSend() {
@@ -74,7 +102,6 @@ export function HomeComposer({ draft, onChangeDraft, onSubmit }: HomeComposerPro
       />
       {iosGlass ? (
         <GlassContainer spacing={Spacing.two} style={styles.toolbar}>
-          <ComposerAttachmentMenu variant="glass" />
           <LiquidGlassView isInteractive style={styles.glassChip}>
             <Pressable
               accessibilityRole="button"
@@ -88,6 +115,11 @@ export function HomeComposer({ draft, onChangeDraft, onSubmit }: HomeComposerPro
             </Pressable>
           </LiquidGlassView>
           <View style={styles.toolbarSpacer} />
+          <ComposerActionsPopover
+            groups={actionGroups}
+            variant="glass"
+            onSelect={handleActionSelect}
+          />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Voice input"
@@ -103,7 +135,6 @@ export function HomeComposer({ draft, onChangeDraft, onSubmit }: HomeComposerPro
         </GlassContainer>
       ) : (
         <View style={styles.toolbar}>
-          <ComposerAttachmentMenu variant="raised" />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={`Model, ${modelLabel}`}
@@ -119,6 +150,11 @@ export function HomeComposer({ draft, onChangeDraft, onSubmit }: HomeComposerPro
             <AppIcon ios="chevron.down" android="keyboard-arrow-down" size={18} color={theme.textSecondary} />
           </Pressable>
           <View style={styles.toolbarSpacer} />
+          <ComposerActionsPopover
+            groups={actionGroups}
+            variant="raised"
+            onSelect={handleActionSelect}
+          />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Voice input"
