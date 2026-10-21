@@ -27,6 +27,12 @@ const MODEL_ICONS: Record<HomeModel['androidIcon'], ImageSourcePropType> = {
   auto_awesome_mosaic: require('@expo/material-symbols/auto_awesome_mosaic.xml'),
   bolt: require('@expo/material-symbols/bolt.xml'),
   psychology: require('@expo/material-symbols/psychology.xml'),
+  image_search: require('@expo/material-symbols/image_search.xml'),
+  code: require('@expo/material-symbols/code.xml'),
+  globe: require('@expo/material-symbols/globe.xml'),
+  edit_note: require('@expo/material-symbols/edit_note.xml'),
+  analytics: require('@expo/material-symbols/analytics.xml'),
+  shield: require('@expo/material-symbols/shield.xml'),
 };
 
 type ComposerModelMenuProps = {
