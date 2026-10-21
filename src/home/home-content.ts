@@ -28,5 +28,3 @@ export const HOME_SUGGESTIONS: HomeSuggestion[] = [
     title: 'Draft a concise follow-up email',
   },
 ];
-
-export const HOME_MODELS = ['OpenCore', 'Fast', 'Deep'] as const;

@@ -1,13 +1,5 @@
-import type MaterialIcons from '@expo/vector-icons/MaterialIcons';
-import type { ButtonProps } from '@expo/ui/swift-ui';
-
-import { HOME_MODELS } from '@/home/home-content';
-
-/** SF Symbol name accepted by the SwiftUI primitives in `@expo/ui/swift-ui`. */
-export type ComposerSymbolName = NonNullable<ButtonProps['systemImage']>;
-
-/** Material Icons glyph name accepted by `@expo/vector-icons`. */
-export type ComposerFallbackIcon = keyof typeof MaterialIcons.glyphMap;
+import type { ComposerFallbackIcon, ComposerSymbolName } from '@/home/symbols';
+import { HOME_MODELS } from '@/home/home-models';
 
 export type ComposerActionKind = 'model' | 'action';
 
@@ -15,6 +7,7 @@ export type ComposerActionItem = {
   id: string;
   title: string;
   subtitle?: string;
+  /** SF Symbol shown next to the action title. */
   iosSymbol: ComposerSymbolName;
   /** Material Symbols icon name, without the `.xml` extension. */
   androidIcon: string;
@@ -29,38 +22,6 @@ export type ComposerActionGroup = {
   id: string;
   title: string;
   items: readonly ComposerActionItem[];
-};
-
-type ModelMeta = {
-  subtitle: string;
-  iosSymbol: ComposerSymbolName;
-  androidIcon: string;
-  fallbackIcon: ComposerFallbackIcon;
-  keywords: readonly string[];
-};
-
-const MODEL_META: Record<string, ModelMeta> = {
-  OpenCore: {
-    subtitle: 'Balanced',
-    iosSymbol: 'sparkles',
-    androidIcon: 'auto_awesome_mosaic',
-    fallbackIcon: 'auto-awesome',
-    keywords: ['default', 'balanced', 'model'],
-  },
-  Fast: {
-    subtitle: 'Quick answers',
-    iosSymbol: 'bolt.fill',
-    androidIcon: 'bolt',
-    fallbackIcon: 'bolt',
-    keywords: ['quick', 'speed', 'model'],
-  },
-  Deep: {
-    subtitle: 'Deep reasoning',
-    iosSymbol: 'brain.head.profile',
-    androidIcon: 'psychology',
-    fallbackIcon: 'psychology',
-    keywords: ['reasoning', 'thorough', 'model'],
-  },
 };
 
 export const QUICK_ACTIONS: readonly ComposerActionItem[] = [
@@ -117,26 +78,16 @@ export const QUICK_ACTIONS: readonly ComposerActionItem[] = [
 ];
 
 export function buildComposerActionGroups(): ComposerActionGroup[] {
-  const models = HOME_MODELS.map((name) => {
-    const meta = MODEL_META[name] ?? {
-      subtitle: 'Model',
-      iosSymbol: 'sparkles' as ComposerSymbolName,
-      androidIcon: 'auto_awesome_mosaic',
-      fallbackIcon: 'auto-awesome',
-      keywords: ['model'],
-    };
-
-    return {
-      id: `model:${name}`,
-      title: name,
-      subtitle: meta.subtitle,
-      iosSymbol: meta.iosSymbol,
-      androidIcon: meta.androidIcon,
-      fallbackIcon: meta.fallbackIcon,
-      keywords: ['model', ...meta.keywords],
-      kind: 'model' as const,
-    };
-  });
+  const models = HOME_MODELS.map((model) => ({
+    id: `model:${model.id}`,
+    title: model.name,
+    subtitle: model.subtitle,
+    iosSymbol: model.iosSymbol,
+    androidIcon: model.androidIcon,
+    fallbackIcon: model.fallbackIcon,
+    keywords: ['model', ...model.keywords],
+    kind: 'model' as const,
+  }));
 
   return [
     { id: 'models', title: 'Models', items: models },

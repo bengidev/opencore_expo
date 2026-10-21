@@ -15,7 +15,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { buildComposerActionGroups, type ComposerActionItem } from '@/home/composer-actions';
 import { ComposerActionsPopover } from '@/home/composer-actions-popover';
 import { ComposerSendButton } from '@/home/composer-send-button';
-import { HOME_MODELS } from '@/home/home-content';
+import { HOME_MODELS } from '@/home/home-models';
 import { useFontFamily } from '@/hooks/use-font-family';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -33,7 +33,7 @@ export function HomeComposer({ draft, onChangeDraft, onSubmit }: HomeComposerPro
   const sans = useFontFamily('sans');
   const [modelIndex, setModelIndex] = useState(0);
   const trimmed = draft.trim();
-  const modelLabel = HOME_MODELS[modelIndex] ?? HOME_MODELS[0];
+  const modelLabel = HOME_MODELS[modelIndex]?.name ?? HOME_MODELS[0].name;
   const iosGlass = useIosLiquidGlass();
   const actionGroups = useMemo(() => buildComposerActionGroups(), []);
 
@@ -44,7 +44,7 @@ export function HomeComposer({ draft, onChangeDraft, onSubmit }: HomeComposerPro
 
   function handleActionSelect(item: ComposerActionItem) {
     if (item.kind === 'model') {
-      const index = HOME_MODELS.findIndex((name) => name === item.title);
+      const index = HOME_MODELS.findIndex((model) => model.name === item.title);
       if (index >= 0) setModelIndex(index);
       return;
     }
