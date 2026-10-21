@@ -7,15 +7,15 @@ import { useReducedMotion } from 'react-native-reanimated';
 
 import { AppBorderBeam } from '@/components/app-border-beam';
 import { AppIcon } from '@/components/app-icon';
-import { LiquidGlassView, useIosLiquidGlass } from '@/components/liquid-glass-view';
-import { ThemedText } from '@/components/themed-text';
+import { useIosLiquidGlass } from '@/components/liquid-glass-view';
 import { Typography } from '@/constants/typography';
 import { BoxShadow, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { buildComposerActionGroups, type ComposerActionItem } from '@/home/composer-actions';
 import { ComposerActionsPopover } from '@/home/composer-actions-popover';
+import { ComposerModelMenu } from '@/home/composer-model-menu';
 import { ComposerSendButton } from '@/home/composer-send-button';
-import { HOME_MODELS } from '@/home/home-models';
+import { DEFAULT_HOME_MODEL_ID, HOME_MODELS } from '@/home/home-models';
 import { useFontFamily } from '@/hooks/use-font-family';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -31,21 +31,20 @@ export function HomeComposer({ draft, onChangeDraft, onSubmit }: HomeComposerPro
   const cardShadow = colorScheme === 'dark' ? BoxShadow.cardDark : BoxShadow.card;
   const reducedMotion = useReducedMotion();
   const sans = useFontFamily('sans');
-  const [modelIndex, setModelIndex] = useState(0);
+  const [modelId, setModelId] = useState(DEFAULT_HOME_MODEL_ID);
   const trimmed = draft.trim();
-  const modelLabel = HOME_MODELS[modelIndex]?.name ?? HOME_MODELS[0].name;
   const iosGlass = useIosLiquidGlass();
   const actionGroups = useMemo(() => buildComposerActionGroups(), []);
 
-  function cycleModel() {
-    setModelIndex((current) => (current + 1) % HOME_MODELS.length);
+  function handleModelSelect(id: string) {
+    setModelId(id);
     void Haptics.selectionAsync().catch(() => {});
   }
 
   function handleActionSelect(item: ComposerActionItem) {
     if (item.kind === 'model') {
-      const index = HOME_MODELS.findIndex((model) => model.name === item.title);
-      if (index >= 0) setModelIndex(index);
+      const model = HOME_MODELS.find((candidate) => candidate.name === item.title);
+      if (model) handleModelSelect(model.id);
       return;
     }
 
@@ -102,18 +101,12 @@ export function HomeComposer({ draft, onChangeDraft, onSubmit }: HomeComposerPro
       />
       {iosGlass ? (
         <GlassContainer spacing={Spacing.two} style={styles.toolbar}>
-          <LiquidGlassView isInteractive style={styles.glassChip}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={`Model, ${modelLabel}`}
-              onPress={cycleModel}
-              style={({ pressed }) => [styles.glassChipHit, pressed && styles.glassPressed]}>
-              <ThemedText variant="bodySm" themeColor="text">
-                {modelLabel}
-              </ThemedText>
-              <AppIcon ios="chevron.down" android="keyboard-arrow-down" size={18} color={theme.textSecondary} />
-            </Pressable>
-          </LiquidGlassView>
+          <ComposerModelMenu
+            models={HOME_MODELS}
+            selectedId={modelId}
+            variant="glass"
+            onSelect={handleModelSelect}
+          />
           <View style={styles.toolbarSpacer} />
           <ComposerActionsPopover
             groups={actionGroups}
@@ -135,20 +128,12 @@ export function HomeComposer({ draft, onChangeDraft, onSubmit }: HomeComposerPro
         </GlassContainer>
       ) : (
         <View style={styles.toolbar}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={`Model, ${modelLabel}`}
-            onPress={cycleModel}
-            style={({ pressed }) => [
-              styles.modelChip,
-              { borderColor: theme.borderVisible, backgroundColor: theme.surfaceRaised },
-              pressed && { opacity: 0.7 },
-            ]}>
-            <ThemedText variant="bodySm" themeColor="text">
-              {modelLabel}
-            </ThemedText>
-            <AppIcon ios="chevron.down" android="keyboard-arrow-down" size={18} color={theme.textSecondary} />
-          </Pressable>
+          <ComposerModelMenu
+            models={HOME_MODELS}
+            selectedId={modelId}
+            variant="raised"
+            onSelect={handleModelSelect}
+          />
           <View style={styles.toolbarSpacer} />
           <ComposerActionsPopover
             groups={actionGroups}
@@ -199,15 +184,6 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
     minHeight: 40,
   },
-  modelChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderWidth: 1,
-    borderRadius: 18,
-    paddingHorizontal: Spacing.two,
-    height: 36,
-  },
   toolbarSpacer: {
     flex: 1,
   },
@@ -216,19 +192,5 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  glassChip: {
-    borderRadius: 18,
-    height: 36,
-  },
-  glassChipHit: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    height: 36,
-    paddingHorizontal: Spacing.two,
-  },
-  glassPressed: {
-    opacity: 0.85,
   },
 });

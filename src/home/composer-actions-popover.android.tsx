@@ -21,7 +21,7 @@ import {
 } from '@/home/composer-actions';
 import {
   ComposerActionsTrigger,
-  type ComposerTriggerVariant,
+  type ComposerControlVariant,
 } from '@/home/composer-actions-trigger';
 
 const ANDROID_ICONS: Record<string, ImageSourcePropType> = {
@@ -37,7 +37,7 @@ const ANDROID_ICONS: Record<string, ImageSourcePropType> = {
 
 type ComposerActionsPopoverProps = {
   groups: readonly ComposerActionGroup[];
-  variant: ComposerTriggerVariant;
+  variant: ComposerControlVariant;
   onSelect: (item: ComposerActionItem) => void;
 };
 

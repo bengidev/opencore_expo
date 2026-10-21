@@ -7,12 +7,15 @@ export type HomeModel = {
   /** SF Symbol shown next to the model name. */
   iosSymbol: ComposerSymbolName;
   /** Material Symbols icon name, without the `.xml` extension. */
-  androidIcon: string;
+  androidIcon: HomeModelAndroidIcon;
   /** Material Icons glyph name, used by the React Native fallback. */
   fallbackIcon: ComposerFallbackIcon;
   /** Extra terms the composer search should match. */
   keywords: readonly string[];
 };
+
+/** Material Symbols used by the Android model menu. */
+export type HomeModelAndroidIcon = 'auto_awesome_mosaic' | 'bolt' | 'psychology';
 
 /** Models offered by the composer, in the order they are presented. */
 export const HOME_MODELS: readonly HomeModel[] = [

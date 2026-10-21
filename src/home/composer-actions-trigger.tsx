@@ -4,7 +4,7 @@ import { AppIcon } from '@/components/app-icon';
 import { LiquidGlassView } from '@/components/liquid-glass-view';
 import { useTheme } from '@/hooks/use-theme';
 
-export type ComposerTriggerVariant = 'glass' | 'raised';
+export type ComposerControlVariant = 'glass' | 'raised';
 
 export const composerTriggerStyles = StyleSheet.create({
   slot: {
@@ -36,7 +36,7 @@ export const composerTriggerStyles = StyleSheet.create({
 });
 
 type ComposerActionsTriggerProps = {
-  variant: ComposerTriggerVariant;
+  variant: ComposerControlVariant;
   onPress: () => void;
 };
 
