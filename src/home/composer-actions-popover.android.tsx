@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import type { ImageSourcePropType } from 'react-native';
+import { StyleSheet, type ImageSourcePropType } from 'react-native';
 
 import {
   Column,
@@ -15,8 +15,7 @@ import { clickable, fillMaxWidth, paddingAll } from '@expo/ui/jetpack-compose/mo
 
 import { useTheme } from '@/hooks/use-theme';
 import {
-  filterComposerActionGroups,
-  type ComposerActionGroup,
+  filterComposerActions,
   type ComposerActionItem,
 } from '@/home/composer-actions';
 import {
@@ -36,24 +35,24 @@ const ANDROID_ICONS: Record<string, ImageSourcePropType> = {
 };
 
 type ComposerActionsPopoverProps = {
-  groups: readonly ComposerActionGroup[];
+  items: readonly ComposerActionItem[];
   variant: ComposerControlVariant;
   onSelect: (item: ComposerActionItem) => void;
 };
 
 /**
  * Native Android popup: a Material 3 `ModalBottomSheet` with a Material text
- * field as the search bar and a divider between the groups.
+ * field as the search bar and a divider below it.
  */
 export function ComposerActionsPopover({
-  groups,
+  items,
   variant,
   onSelect,
 }: ComposerActionsPopoverProps) {
   const theme = useTheme();
   const [isVisible, setIsVisible] = useState(false);
   const [query, setQuery] = useState('');
-  const visibleGroups = useMemo(() => filterComposerActionGroups(groups, query), [groups, query]);
+  const visibleItems = useMemo(() => filterComposerActions(items, query), [items, query]);
 
   function dismiss() {
     setIsVisible(false);
@@ -85,34 +84,25 @@ export function ComposerActionsPopover({
                   <Text color={theme.textSecondary}>Search actions</Text>
                 </TextField.Placeholder>
               </TextField>
-              {visibleGroups.map((group, groupIndex) => (
-                <Column key={group.id} verticalArrangement={{ spacedBy: 2 }}>
-                  {groupIndex > 0 ? <HorizontalDivider /> : null}
-                  <Text
-                    color={theme.textSecondary}
-                    style={{ fontSize: 12, fontWeight: '600' }}>
-                    {group.title}
-                  </Text>
-                  {group.items.map((item) => (
-                    <ListItem
-                      key={item.id}
-                      modifiers={[clickable(() => handleSelect(item))]}>
-                      <ListItem.LeadingContent>
-                        <Icon source={ANDROID_ICONS[item.androidIcon]} size={22} />
-                      </ListItem.LeadingContent>
-                      <ListItem.HeadlineContent>
-                        <Text style={{ fontSize: 15, fontWeight: '500' }}>{item.title}</Text>
-                      </ListItem.HeadlineContent>
-                      {item.subtitle ? (
-                        <ListItem.SupportingContent>
-                          <Text color={theme.textSecondary} style={{ fontSize: 12 }}>
-                            {item.subtitle}
-                          </Text>
-                        </ListItem.SupportingContent>
-                      ) : null}
-                    </ListItem>
-                  ))}
-                </Column>
+              <HorizontalDivider color={theme.border} thickness={StyleSheet.hairlineWidth} />
+              {visibleItems.map((item) => (
+                <ListItem
+                  key={item.id}
+                  modifiers={[clickable(() => handleSelect(item))]}>
+                  <ListItem.LeadingContent>
+                    <Icon source={ANDROID_ICONS[item.androidIcon]} size={22} />
+                  </ListItem.LeadingContent>
+                  <ListItem.HeadlineContent>
+                    <Text style={{ fontSize: 15, fontWeight: '500' }}>{item.title}</Text>
+                  </ListItem.HeadlineContent>
+                  {item.subtitle ? (
+                    <ListItem.SupportingContent>
+                      <Text color={theme.textSecondary} style={{ fontSize: 12 }}>
+                        {item.subtitle}
+                      </Text>
+                    </ListItem.SupportingContent>
+                  ) : null}
+                </ListItem>
               ))}
             </Column>
           </ModalBottomSheet>

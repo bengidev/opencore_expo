@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { GlassContainer } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
@@ -11,7 +11,7 @@ import { useIosLiquidGlass } from '@/components/liquid-glass-view';
 import { Typography } from '@/constants/typography';
 import { BoxShadow, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { buildComposerActionGroups, type ComposerActionItem } from '@/home/composer-actions';
+import { QUICK_ACTIONS, type ComposerActionItem } from '@/home/composer-actions';
 import { ComposerActionsPopover } from '@/home/composer-actions-popover';
 import { ComposerModelMenu } from '@/home/composer-model-menu';
 import { ComposerSendButton } from '@/home/composer-send-button';
@@ -34,7 +34,6 @@ export function HomeComposer({ draft, onChangeDraft, onSubmit }: HomeComposerPro
   const [modelId, setModelId] = useState(DEFAULT_HOME_MODEL_ID);
   const trimmed = draft.trim();
   const iosGlass = useIosLiquidGlass();
-  const actionGroups = useMemo(() => buildComposerActionGroups(), []);
 
   function handleModelSelect(id: string) {
     setModelId(id);
@@ -42,12 +41,6 @@ export function HomeComposer({ draft, onChangeDraft, onSubmit }: HomeComposerPro
   }
 
   function handleActionSelect(item: ComposerActionItem) {
-    if (item.kind === 'model') {
-      const model = HOME_MODELS.find((candidate) => candidate.name === item.title);
-      if (model) handleModelSelect(model.id);
-      return;
-    }
-
     switch (item.id) {
       case 'action:camera':
       case 'action:gallery':
@@ -108,11 +101,7 @@ export function HomeComposer({ draft, onChangeDraft, onSubmit }: HomeComposerPro
             onSelect={handleModelSelect}
           />
           <View style={styles.toolbarSpacer} />
-          <ComposerActionsPopover
-            groups={actionGroups}
-            variant="glass"
-            onSelect={handleActionSelect}
-          />
+          <ComposerActionsPopover items={QUICK_ACTIONS} variant="glass" onSelect={handleActionSelect} />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Voice input"
@@ -135,11 +124,7 @@ export function HomeComposer({ draft, onChangeDraft, onSubmit }: HomeComposerPro
             onSelect={handleModelSelect}
           />
           <View style={styles.toolbarSpacer} />
-          <ComposerActionsPopover
-            groups={actionGroups}
-            variant="raised"
-            onSelect={handleActionSelect}
-          />
+          <ComposerActionsPopover items={QUICK_ACTIONS} variant="raised" onSelect={handleActionSelect} />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Voice input"

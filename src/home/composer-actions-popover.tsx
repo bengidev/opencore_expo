@@ -13,8 +13,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import {
-  filterComposerActionGroups,
-  type ComposerActionGroup,
+  filterComposerActions,
   type ComposerActionItem,
 } from '@/home/composer-actions';
 import {
@@ -23,21 +22,21 @@ import {
 } from '@/home/composer-actions-trigger';
 
 type ComposerActionsPopoverProps = {
-  groups: readonly ComposerActionGroup[];
+  items: readonly ComposerActionItem[];
   variant: ComposerControlVariant;
   onSelect: (item: ComposerActionItem) => void;
 };
 
 /** Fallback popup for web and platforms without a native container. */
 export function ComposerActionsPopover({
-  groups,
+  items,
   variant,
   onSelect,
 }: ComposerActionsPopoverProps) {
   const theme = useTheme();
   const [isVisible, setIsVisible] = useState(false);
   const [query, setQuery] = useState('');
-  const visibleGroups = useMemo(() => filterComposerActionGroups(groups, query), [groups, query]);
+  const visibleItems = useMemo(() => filterComposerActions(items, query), [items, query]);
 
   function dismiss() {
     setIsVisible(false);
@@ -65,43 +64,34 @@ export function ComposerActionsPopover({
               accessibilityLabel="Search actions"
             />
             <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
-              {visibleGroups.map((group, groupIndex) => (
-                <View key={group.id} style={styles.group}>
-                  {groupIndex > 0 ? (
-                    <View style={[styles.divider, { backgroundColor: theme.border }]} />
-                  ) : null}
-                  <ThemedText variant="bodySm" themeColor="textSecondary" style={styles.groupTitle}>
-                    {group.title}
-                  </ThemedText>
-                  {group.items.map((item) => (
-                    <Pressable
-                      key={item.id}
-                      accessibilityRole="button"
-                      accessibilityLabel={item.title}
-                      onPress={() => {
-                        dismiss();
-                        onSelect(item);
-                      }}
-                      style={({ pressed }) => [styles.row, pressed && { opacity: 0.6 }]}>
-                      <AppIcon
-                        ios={item.iosSymbol}
-                        android={item.fallbackIcon}
-                        size={20}
-                        color={theme.textDisplay}
-                      />
-                      <View style={styles.rowText}>
-                        <ThemedText variant="body" themeColor="text">
-                          {item.title}
-                        </ThemedText>
-                        {item.subtitle ? (
-                          <ThemedText variant="bodySm" themeColor="textSecondary">
-                            {item.subtitle}
-                          </ThemedText>
-                        ) : null}
-                      </View>
-                    </Pressable>
-                  ))}
-                </View>
+              <View style={[styles.divider, { backgroundColor: theme.border }]} />
+              {visibleItems.map((item) => (
+                <Pressable
+                  key={item.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={item.title}
+                  onPress={() => {
+                    dismiss();
+                    onSelect(item);
+                  }}
+                  style={({ pressed }) => [styles.row, pressed && { opacity: 0.6 }]}>
+                  <AppIcon
+                    ios={item.iosSymbol}
+                    android={item.fallbackIcon}
+                    size={20}
+                    color={theme.textDisplay}
+                  />
+                  <View style={styles.rowText}>
+                    <ThemedText variant="body" themeColor="text">
+                      {item.title}
+                    </ThemedText>
+                    {item.subtitle ? (
+                      <ThemedText variant="bodySm" themeColor="textSecondary">
+                        {item.subtitle}
+                      </ThemedText>
+                    ) : null}
+                  </View>
+                </Pressable>
               ))}
             </ScrollView>
           </Pressable>
@@ -136,14 +126,8 @@ const styles = StyleSheet.create({
   list: {
     maxHeight: 360,
   },
-  group: {
-    paddingTop: Spacing.one,
-  },
   divider: {
     height: StyleSheet.hairlineWidth,
-    marginBottom: Spacing.one,
-  },
-  groupTitle: {
     marginBottom: Spacing.one,
   },
   row: {

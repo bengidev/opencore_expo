@@ -24,8 +24,7 @@ import {
 
 import { useTheme } from '@/hooks/use-theme';
 import {
-  filterComposerActionGroups,
-  type ComposerActionGroup,
+  filterComposerActions,
   type ComposerActionItem,
 } from '@/home/composer-actions';
 import {
@@ -34,18 +33,18 @@ import {
 } from '@/home/composer-actions-trigger';
 
 type ComposerActionsPopoverProps = {
-  groups: readonly ComposerActionGroup[];
+  items: readonly ComposerActionItem[];
   variant: ComposerControlVariant;
   onSelect: (item: ComposerActionItem) => void;
 };
 
 /**
  * Native iOS popup: a SwiftUI `Popover` anchored to the composer trigger, with a
- * native `TextField` as the search bar and `Divider` between the groups. The
- * panel itself carries the liquid glass effect (no-op below iOS 26).
+ * native `TextField` as the search bar and a `Divider` below it. The panel
+ * itself carries the liquid glass effect (no-op below iOS 26).
  */
 export function ComposerActionsPopover({
-  groups,
+  items,
   variant,
   onSelect,
 }: ComposerActionsPopoverProps) {
@@ -53,7 +52,7 @@ export function ComposerActionsPopover({
   const [isPresented, setIsPresented] = useState(false);
   const [query, setQuery] = useState('');
   const fieldRef = useRef<TextFieldRef>(null);
-  const visibleGroups = useMemo(() => filterComposerActionGroups(groups, query), [groups, query]);
+  const visibleItems = useMemo(() => filterComposerActions(items, query), [items, query]);
 
   function dismiss() {
     void fieldRef.current?.clear();
@@ -83,6 +82,7 @@ export function ComposerActionsPopover({
         <Popover.Content>
           <VStack
             spacing={10}
+            alignment="leading"
             modifiers={[
               padding({ all: 14 }),
               frame({ width: 280 }),
@@ -100,36 +100,25 @@ export function ComposerActionsPopover({
                 onTextChange={setQuery}
               />
             </HStack>
-            {visibleGroups.map((group, groupIndex) => (
-              <VStack key={group.id} spacing={6} alignment="leading">
-                {groupIndex > 0 ? <Divider /> : null}
-                <Text
-                  modifiers={[
-                    font({ size: 12, weight: 'semibold' }),
-                    foregroundStyle(theme.textSecondary),
-                  ]}>
-                  {group.title}
-                </Text>
-                {group.items.map((item) => (
-                  <Button
-                    key={item.id}
-                    onPress={() => handleSelect(item)}
-                    modifiers={[buttonStyle('plain')]}>
-                    <HStack spacing={10}>
-                      <Image systemName={item.iosSymbol} size={18} color={theme.textDisplay} />
-                      <VStack alignment="leading" spacing={2}>
-                        <Text modifiers={[font({ size: 15, weight: 'medium' })]}>{item.title}</Text>
-                        {item.subtitle ? (
-                          <Text
-                            modifiers={[font({ size: 12 }), foregroundStyle(theme.textSecondary)]}>
-                            {item.subtitle}
-                          </Text>
-                        ) : null}
-                      </VStack>
-                    </HStack>
-                  </Button>
-                ))}
-              </VStack>
+            <Divider />
+            {visibleItems.map((item) => (
+              <Button
+                key={item.id}
+                onPress={() => handleSelect(item)}
+                modifiers={[buttonStyle('plain')]}>
+                <HStack spacing={10}>
+                  <Image systemName={item.iosSymbol} size={18} color={theme.textDisplay} />
+                  <VStack alignment="leading" spacing={2}>
+                    <Text modifiers={[font({ size: 15, weight: 'medium' })]}>{item.title}</Text>
+                    {item.subtitle ? (
+                      <Text
+                        modifiers={[font({ size: 12 }), foregroundStyle(theme.textSecondary)]}>
+                        {item.subtitle}
+                      </Text>
+                    ) : null}
+                  </VStack>
+                </HStack>
+              </Button>
             ))}
           </VStack>
         </Popover.Content>
