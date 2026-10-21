@@ -13,9 +13,9 @@ import { BoxShadow, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { QUICK_ACTIONS, type ComposerActionItem } from '@/home/composer-actions';
 import { ComposerActionsPopover } from '@/home/composer-actions-popover';
-import { ComposerModelMenu } from '@/home/composer-model-menu';
+import { ComposerModelSheet } from '@/home/composer-model-sheet';
 import { ComposerSendButton } from '@/home/composer-send-button';
-import { DEFAULT_HOME_MODEL_ID, HOME_MODELS } from '@/home/home-models';
+import { DEFAULT_HOME_MODEL_ID, HOME_MODEL_SHEET_ITEMS } from '@/home/home-models';
 import { useFontFamily } from '@/hooks/use-font-family';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -94,8 +94,8 @@ export function HomeComposer({ draft, onChangeDraft, onSubmit }: HomeComposerPro
       />
       {iosGlass ? (
         <GlassContainer spacing={Spacing.two} style={styles.toolbar}>
-          <ComposerModelMenu
-            models={HOME_MODELS}
+          <ComposerModelSheet
+            models={HOME_MODEL_SHEET_ITEMS}
             selectedId={modelId}
             variant="glass"
             onSelect={handleModelSelect}
@@ -117,8 +117,8 @@ export function HomeComposer({ draft, onChangeDraft, onSubmit }: HomeComposerPro
         </GlassContainer>
       ) : (
         <View style={styles.toolbar}>
-          <ComposerModelMenu
-            models={HOME_MODELS}
+          <ComposerModelSheet
+            models={HOME_MODEL_SHEET_ITEMS}
             selectedId={modelId}
             variant="raised"
             onSelect={handleModelSelect}
