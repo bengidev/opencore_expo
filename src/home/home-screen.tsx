@@ -9,7 +9,7 @@ import { Spacing } from '@/constants/theme';
 import { HOME_SPEECH_LINES } from '@/home/home-content';
 import { HomeComposer } from '@/home/home-composer';
 import { HomeGreeting } from '@/home/home-greeting';
-import { HOME_EDGE_INSET } from '@/home/home-layout';
+import { HOME_COMPOSER_GAP, HOME_EDGE_INSET } from '@/home/home-layout';
 import { SuggestionCarousel } from '@/home/suggestion-carousel';
 import { HeroInteractionStage } from '@/onboarding/hero-interaction-stage';
 
@@ -80,7 +80,7 @@ const styles = StyleSheet.create({
     minHeight: 200,
   },
   bottom: {
-    gap: Spacing.one,
+    gap: HOME_COMPOSER_GAP,
     paddingTop: 0,
     overflow: 'visible',
   },

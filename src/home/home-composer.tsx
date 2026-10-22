@@ -147,7 +147,6 @@ export function HomeComposer({ draft, onChangeDraft, onSubmit }: HomeComposerPro
 const styles = StyleSheet.create({
   beamWrap: {
     overflow: 'visible',
-    marginVertical: Spacing.one,
   },
   shell: {
     borderWidth: 1,

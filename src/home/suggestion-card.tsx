@@ -72,7 +72,6 @@ export function SuggestionCard({ suggestion, onPress }: SuggestionCardProps) {
 const styles = StyleSheet.create({
   pressable: {
     width: 168,
-    marginVertical: Spacing.one,
   },
   card: {
     minHeight: 88,

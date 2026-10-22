@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: HOME_EDGE_INSET,
-    paddingVertical: Spacing.one,
+    paddingVertical: 0,
     gap: Spacing.two,
     flexDirection: 'row',
   },
