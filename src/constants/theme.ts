@@ -52,6 +52,18 @@ export const Spacing = {
   six: 64,
 } as const;
 
+/**
+ * Corner radii, in points.
+ *
+ * `surface` follows Apple's display corner standard: iPhone-class hardware
+ * reports a ~38.5pt display corner radius (roughly 5.5 mm), and iOS renders
+ * those corners as continuous curves rather than circular arcs. Surfaces that
+ * use it pair it with `borderCurve: 'continuous'`.
+ */
+export const Radius = {
+  surface: 38,
+} as const;
+
 /** CSS box-shadow strings (Expo / New Architecture). */
 export const BoxShadow = {
   card: '0 2px 10px rgba(0, 0, 0, 0.08)',
