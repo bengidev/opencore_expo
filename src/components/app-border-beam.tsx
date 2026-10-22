@@ -1,9 +1,8 @@
 import { BorderBeam } from 'border-beam-native';
 
 import type { AppBorderBeamProps } from '@/components/app-border-beam.types';
+import { Radius } from '@/constants/theme';
 import { useAppBorderBeam } from '@/hooks/use-app-border-beam';
-
-const SHELL_BORDER_RADIUS = 20;
 
 export function AppBorderBeam({
   children,
@@ -11,7 +10,7 @@ export function AppBorderBeam({
   strength,
   duration,
   active = true,
-  borderRadius = SHELL_BORDER_RADIUS,
+  borderRadius = Radius.surface,
   style,
 }: AppBorderBeamProps) {
   const beam = useAppBorderBeam();
