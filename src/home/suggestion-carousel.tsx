@@ -2,6 +2,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { Spacing } from '@/constants/theme';
 import { HOME_SUGGESTIONS, type HomeSuggestion } from '@/home/home-content';
+import { HOME_EDGE_INSET } from '@/home/home-layout';
 import { SuggestionCard } from '@/home/suggestion-card';
 
 type SuggestionCarouselProps = {
@@ -29,10 +30,10 @@ export function SuggestionCarousel({ onSelect }: SuggestionCarouselProps) {
 
 const styles = StyleSheet.create({
   wrap: {
-    marginHorizontal: -Spacing.three,
+    marginHorizontal: -HOME_EDGE_INSET,
   },
   content: {
-    paddingHorizontal: Spacing.three,
+    paddingHorizontal: HOME_EDGE_INSET,
     paddingVertical: Spacing.one,
     gap: Spacing.two,
     flexDirection: 'row',
