@@ -9,7 +9,7 @@ import { AppBorderBeam } from '@/components/app-border-beam';
 import { AppIcon } from '@/components/app-icon';
 import { useIosLiquidGlass } from '@/components/liquid-glass-view';
 import { Typography } from '@/constants/typography';
-import { BoxShadow, Spacing } from '@/constants/theme';
+import { BoxShadow, Radius, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { QUICK_ACTIONS, type ComposerActionItem } from '@/home/composer-actions';
 import { ComposerActionsPopover } from '@/home/composer-actions-popover';
@@ -151,7 +151,8 @@ const styles = StyleSheet.create({
   },
   shell: {
     borderWidth: 1,
-    borderRadius: 20,
+    borderRadius: Radius.surface,
+    borderCurve: 'continuous',
     paddingHorizontal: Spacing.three,
     paddingTop: Spacing.three,
     paddingBottom: Spacing.three,

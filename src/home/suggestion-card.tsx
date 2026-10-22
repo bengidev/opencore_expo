@@ -4,7 +4,7 @@ import { Pressable, StyleSheet } from 'react-native';
 import Animated, { cubicBezier, useReducedMotion } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
-import { BoxShadow, Spacing } from '@/constants/theme';
+import { BoxShadow, Radius, Spacing } from '@/constants/theme';
 import type { HomeSuggestion } from '@/home/home-content';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTheme } from '@/hooks/use-theme';
@@ -77,7 +77,8 @@ const styles = StyleSheet.create({
   card: {
     minHeight: 88,
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: Radius.surface,
+    borderCurve: 'continuous',
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.three,
     justifyContent: 'center',
