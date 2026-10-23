@@ -7,41 +7,26 @@ import { Composer } from '@/components/chat/composer';
 import { MessageList } from '@/components/chat/message-list';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth } from '@/constants/theme';
-import { createChatMessage, type ChatMessage } from '@/super-chat/chat-message';
-
-const LOCAL_REPLY =
-  'Pesan diterima. Penyedia model belum terhubung, jadi balasan ini masih lokal di perangkat.';
-
-function appendExchange(current: ChatMessage[], text: string): ChatMessage[] {
-  return [
-    ...current,
-    createChatMessage('user', text),
-    createChatMessage('assistant', LOCAL_REPLY),
-  ];
-}
+import type { ChatMessage } from '@/super-chat/chat-message';
+import { appendChatExchange, createInitialChatMessages, readChatSeed } from '@/super-chat/chat-state';
 
 export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const { seed } = useLocalSearchParams<{ seed?: string }>();
   const appliedSeedRef = useRef<string | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>(() => [
-    createChatMessage('assistant', 'Halo. Saya OpenCore. Kirim pesan untuk mulai berbicara.'),
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>(createInitialChatMessages);
 
   function handleSend(text: string) {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    setMessages((current) => appendExchange(current, trimmed));
+    setMessages((current) => appendChatExchange(current, text));
   }
 
   useEffect(() => {
-    const raw = Array.isArray(seed) ? seed[0] : seed;
-    const trimmed = typeof raw === 'string' ? raw.trim() : '';
-    if (!trimmed || appliedSeedRef.current === trimmed) {
+    const trimmed = readChatSeed(seed);
+    if (trimmed === null || appliedSeedRef.current === trimmed) {
       return;
     }
     appliedSeedRef.current = trimmed;
-    setMessages((current) => appendExchange(current, trimmed));
+    setMessages((current) => appendChatExchange(current, trimmed));
   }, [seed]);
 
   return (
