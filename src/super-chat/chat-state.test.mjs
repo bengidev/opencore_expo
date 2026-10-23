@@ -7,11 +7,20 @@ const greeting = 'Halo. Saya OpenCore. Kirim pesan untuk mulai berbicara.';
 const reply = 'Pesan diterima. Penyedia model belum terhubung, jadi balasan ini masih lokal di perangkat.';
 
 test('creates the initial assistant greeting', () => {
-  assert.deepEqual(createInitialChatMessages().map(({ role, text }) => ({ role, text })), [{ role: 'assistant', text: greeting }]);
+  assert.deepEqual(
+    createInitialChatMessages().map(({ role, text }) => ({ role, text })),
+    [{ role: 'assistant', text: greeting }],
+  );
 });
 test('appends trimmed user text followed by the local assistant reply', () => {
   const result = appendChatExchange([], '  Hai  ');
-  assert.deepEqual(result.map(({ role, text }) => ({ role, text })), [{ role: 'user', text: 'Hai' }, { role: 'assistant', text: reply }]);
+  assert.deepEqual(
+    result.map(({ role, text }) => ({ role, text })),
+    [
+      { role: 'user', text: 'Hai' },
+      { role: 'assistant', text: reply },
+    ],
+  );
 });
 test('blank exchanges preserve the existing array', () => {
   const messages = createInitialChatMessages();
