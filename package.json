@@ -61,7 +61,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "node --test src/onboarding/*.test.mjs"
+    "test": "node --test src/onboarding/*.test.mjs src/super-chat/*.test.mjs"
   },
   "private": true
 }

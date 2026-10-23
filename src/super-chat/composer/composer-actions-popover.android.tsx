@@ -17,11 +17,11 @@ import { useTheme } from '@/hooks/use-theme';
 import {
   filterComposerActions,
   type ComposerActionItem,
-} from '@/home/composer-actions';
+} from '@/super-chat/composer/composer-actions';
 import {
   ComposerActionsTrigger,
   type ComposerControlVariant,
-} from '@/home/composer-actions-trigger';
+} from '@/super-chat/composer/composer-actions-trigger';
 
 const ANDROID_ICONS: Record<string, ImageSourcePropType> = {
   auto_awesome_mosaic: require('@expo/material-symbols/auto_awesome_mosaic.xml'),

@@ -2,14 +2,14 @@ import { BottomSheet } from '@expo/ui/community/bottom-sheet';
 import { useCallback, useRef, useState } from 'react';
 
 import { useTheme } from '@/hooks/use-theme';
-import type { ComposerControlVariant } from '@/home/composer-actions-trigger';
-import { ComposerModelTrigger } from '@/home/composer-model-trigger';
-import type { HomeModel } from '@/home/home-models';
-import { ModelSheetContent } from '@/home/model-sheet-content';
+import type { ComposerControlVariant } from '@/super-chat/composer/composer-actions-trigger';
+import { ComposerModelTrigger } from '@/super-chat/composer/composer-model-trigger';
+import type { HomeModel } from '@/super-chat/composer/chat-models';
+import { ModelSheetContent } from '@/super-chat/composer/model-sheet-content';
 import {
   MODEL_SHEET_DEFAULT_SNAP_INDEX,
   MODEL_SHEET_SNAP_POINTS,
-} from '@/home/model-sheet-snap';
+} from '@/super-chat/composer/model-sheet-snap';
 
 type ComposerModelSheetProps = {
   models: readonly HomeModel[];
