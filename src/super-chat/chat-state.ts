@@ -1,4 +1,4 @@
-import { createChatMessage, type ChatMessage } from './chat-message';
+import { createChatMessage, type ChatMessage } from './chat-message.ts';
 
 const GREETING = 'Halo. Saya OpenCore. Kirim pesan untuk mulai berbicara.';
 const LOCAL_REPLY =
