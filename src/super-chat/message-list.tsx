@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { StyleSheet, type ListRenderItem } from 'react-native';
 import Animated from 'react-native-reanimated';
 
-import { CHAT_BUBBLE_LAYOUT, MessageBubble } from '@/components/chat/message-bubble';
+import { CHAT_BUBBLE_LAYOUT, MessageBubble } from '@/super-chat/message-bubble';
 import { Spacing } from '@/constants/theme';
 import type { ChatMessage } from '@/super-chat/chat-message';
 
