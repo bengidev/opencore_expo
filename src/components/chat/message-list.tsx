@@ -4,7 +4,7 @@ import Animated from 'react-native-reanimated';
 
 import { CHAT_BUBBLE_LAYOUT, MessageBubble } from '@/components/chat/message-bubble';
 import { Spacing } from '@/constants/theme';
-import type { ChatMessage } from '@/types/chat';
+import type { ChatMessage } from '@/super-chat/chat-message';
 
 export function MessageList({ messages }: { messages: ChatMessage[] }) {
   const listRef = useRef<Animated.FlatList<ChatMessage>>(null);

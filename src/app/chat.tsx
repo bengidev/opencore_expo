@@ -7,7 +7,7 @@ import { Composer } from '@/components/chat/composer';
 import { MessageList } from '@/components/chat/message-list';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth } from '@/constants/theme';
-import { createChatMessage, type ChatMessage } from '@/types/chat';
+import { createChatMessage, type ChatMessage } from '@/super-chat/chat-message';
 
 const LOCAL_REPLY =
   'Pesan diterima. Penyedia model belum terhubung, jadi balasan ini masih lokal di perangkat.';
