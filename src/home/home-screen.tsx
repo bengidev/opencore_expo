@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
 import { HOME_SPEECH_LINES } from '@/home/home-content';
-import { HomeComposer } from '@/home/home-composer';
+import { SuperChatComposer } from '@/super-chat/composer/super-chat-composer.tsx';
 import { HomeGreeting } from '@/home/home-greeting';
 import { HOME_COMPOSER_GAP, HOME_EDGE_INSET } from '@/home/home-layout';
 import { SuggestionCarousel } from '@/home/suggestion-carousel';
@@ -48,7 +48,7 @@ export function HomeScreen() {
           <HeroInteractionStage speechLines={HOME_SPEECH_LINES} stageStyle={styles.heroStage} />
           <View style={styles.bottom}>
             <SuggestionCarousel onSelect={handleSuggestionSelect} />
-            <HomeComposer draft={draft} onChangeDraft={setDraft} onSubmit={handleSubmit} />
+            <SuperChatComposer draft={draft} onDraftChange={setDraft} onSubmit={handleSubmit} onNewChat={() => router.push('/chat')} />
           </View>
         </View>
       </KeyboardAvoidingView>

@@ -10,8 +10,8 @@ import {
 } from '@expo/ui/jetpack-compose/modifiers';
 
 import { useTheme } from '@/hooks/use-theme';
-import type { ComposerControlVariant } from '@/home/composer-actions-trigger';
-import type { HomeModel, HomeModelAndroidIcon } from '@/home/home-models';
+import type { ComposerControlVariant } from '@/super-chat/composer/composer-actions-trigger';
+import type { HomeModel, HomeModelAndroidIcon } from '@/super-chat/composer/chat-models';
 
 const MODEL_ICONS: Record<HomeModelAndroidIcon, ImageSourcePropType> = {
   auto_awesome_mosaic: require('@expo/material-symbols/auto_awesome_mosaic.xml'),

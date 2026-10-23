@@ -5,7 +5,7 @@ import { AppIcon } from '@/components/app-icon';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { filterHomeModels, type HomeModel } from '@/home/home-models';
+import { filterHomeModels, type HomeModel } from '@/super-chat/composer/chat-models';
 
 type ModelSheetContentProps = {
   models: readonly HomeModel[];
