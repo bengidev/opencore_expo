@@ -4,7 +4,7 @@ import Animated, { Easing, Keyframe, LinearTransition, ReduceMotion } from 'reac
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import type { ChatMessage } from '@/types/chat';
+import type { ChatMessage } from '@/super-chat/chat-message';
 
 const EASE_OUT = Easing.bezier(0.23, 1, 0.32, 1);
 const ENTER_MS = 200;

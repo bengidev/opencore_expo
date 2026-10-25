@@ -2,8 +2,8 @@ import { Button, HStack, Host, Image, Text } from '@expo/ui/swift-ui';
 import { buttonStyle, font } from '@expo/ui/swift-ui/modifiers';
 
 import { useTheme } from '@/hooks/use-theme';
-import type { ComposerControlVariant } from '@/home/composer-actions-trigger';
-import type { HomeModel } from '@/home/home-models';
+import type { ComposerControlVariant } from '@/super-chat/composer/composer-actions-trigger';
+import type { HomeModel } from '@/super-chat/composer/chat-models';
 
 type ComposerModelTriggerProps = {
   model: HomeModel;

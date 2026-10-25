@@ -1,4 +1,3 @@
-import { router } from 'expo-router';
 import { GlassContainer } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
 import { useState } from 'react';
@@ -11,21 +10,23 @@ import { useIosLiquidGlass } from '@/components/liquid-glass-view';
 import { Typography } from '@/constants/typography';
 import { BoxShadow, Radius, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { QUICK_ACTIONS, type ComposerActionItem } from '@/home/composer-actions';
-import { ComposerActionsPopover } from '@/home/composer-actions-popover';
-import { ComposerModelSheet } from '@/home/composer-model-sheet';
-import { ComposerSendButton } from '@/home/composer-send-button';
-import { DEFAULT_HOME_MODEL_ID, HOME_MODEL_SHEET_ITEMS } from '@/home/home-models';
+import { QUICK_ACTIONS, type ComposerActionItem } from '@/super-chat/composer/composer-actions';
+import { ComposerActionsPopover } from '@/super-chat/composer/composer-actions-popover';
+import { ComposerModelSheet } from '@/super-chat/composer/composer-model-sheet';
+import { ComposerSendButton } from '@/super-chat/composer/composer-send-button';
+import { DEFAULT_HOME_MODEL_ID, HOME_MODEL_SHEET_ITEMS } from '@/super-chat/composer/chat-models';
 import { useFontFamily } from '@/hooks/use-font-family';
 import { useTheme } from '@/hooks/use-theme';
+import { normalizeComposerDraft } from '@/super-chat/composer-state';
 
-type HomeComposerProps = {
+export type SuperChatComposerProps = {
   draft: string;
-  onChangeDraft: (value: string) => void;
+  onDraftChange: (value: string) => void;
   onSubmit: (message: string) => void;
+  onNewChat: () => void;
 };
 
-export function HomeComposer({ draft, onChangeDraft, onSubmit }: HomeComposerProps) {
+export function SuperChatComposer({ draft, onDraftChange, onSubmit, onNewChat }: SuperChatComposerProps) {
   const theme = useTheme();
   const colorScheme = useColorScheme();
   const cardShadow = colorScheme === 'dark' ? BoxShadow.cardDark : BoxShadow.card;
@@ -49,10 +50,10 @@ export function HomeComposer({ draft, onChangeDraft, onSubmit }: HomeComposerPro
         Alert.alert(item.title, `${item.title} will be available soon.`);
         return;
       case 'action:clear-input':
-        onChangeDraft('');
+        onDraftChange('');
         return;
       case 'action:new-chat':
-        router.push('/chat');
+        onNewChat();
         return;
       default:
         return;
@@ -60,9 +61,10 @@ export function HomeComposer({ draft, onChangeDraft, onSubmit }: HomeComposerPro
   }
 
   function handleSend() {
-    if (!trimmed) return;
+    const message = normalizeComposerDraft(draft);
+    if (message === null) return;
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-    onSubmit(trimmed);
+    onSubmit(message);
   }
 
   return (
@@ -78,7 +80,7 @@ export function HomeComposer({ draft, onChangeDraft, onSubmit }: HomeComposerPro
         ]}>
       <TextInput
         value={draft}
-        onChangeText={onChangeDraft}
+        onChangeText={onDraftChange}
         placeholder="How can I help you today?"
         placeholderTextColor={theme.textDisabled}
         multiline

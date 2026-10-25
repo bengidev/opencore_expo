@@ -26,11 +26,11 @@ import { useTheme } from '@/hooks/use-theme';
 import {
   filterComposerActions,
   type ComposerActionItem,
-} from '@/home/composer-actions';
+} from '@/super-chat/composer/composer-actions';
 import {
   ComposerActionsTrigger,
   type ComposerControlVariant,
-} from '@/home/composer-actions-trigger';
+} from '@/super-chat/composer/composer-actions-trigger';
 
 type ComposerActionsPopoverProps = {
   items: readonly ComposerActionItem[];
