@@ -27,6 +27,7 @@ export function MessageList({ messages }: { messages: ChatMessage[] }) {
       renderItem={renderItem}
       itemLayoutAnimation={CHAT_BUBBLE_LAYOUT}
       contentContainerStyle={styles.content}
+      contentInsetAdjustmentBehavior="automatic"
       keyboardShouldPersistTaps="handled"
       onContentSizeChange={() => {
         listRef.current?.scrollToEnd({ animated: true });

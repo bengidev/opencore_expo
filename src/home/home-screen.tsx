@@ -27,7 +27,7 @@ export function HomeScreen() {
     const trimmed = message.trim();
     if (!trimmed) return;
     setDraft('');
-    router.push({ pathname: '/chat', params: { seed: trimmed } });
+    router.push({ pathname: '/super-chat', params: { seed: trimmed } });
   }
 
   const content = (
@@ -48,7 +48,7 @@ export function HomeScreen() {
           <HeroInteractionStage speechLines={HOME_SPEECH_LINES} stageStyle={styles.heroStage} />
           <View style={styles.bottom}>
             <SuggestionCarousel onSelect={handleSuggestionSelect} />
-            <SuperChatComposer draft={draft} onDraftChange={setDraft} onSubmit={handleSubmit} onNewChat={() => router.push('/chat')} />
+            <SuperChatComposer draft={draft} onDraftChange={setDraft} onSubmit={handleSubmit} onNewChat={() => router.push('/super-chat')} />
           </View>
         </View>
       </KeyboardAvoidingView>

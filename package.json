@@ -55,7 +55,7 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
-    "postinstall": "node scripts/ensure-metal-fx-native-skia2.mjs",
+    "postinstall": "node scripts/ensure-metal-fx-native-skia2.mjs && node scripts/patch-vendor-reanimated-deps.mjs",
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",

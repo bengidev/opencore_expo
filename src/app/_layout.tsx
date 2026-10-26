@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 
+import { useIosLiquidGlass } from '@/components/liquid-glass-view';
 import { Colors } from '@/constants/theme';
 import { useAppFonts } from '@/hooks/use-app-fonts';
 
@@ -17,6 +18,7 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
   const scheme = colorScheme === 'dark' ? 'dark' : 'light';
   const colors = Colors[scheme];
+  const iosGlass = useIosLiquidGlass();
   const [loaded, error] = useAppFonts();
 
   useEffect(() => {
@@ -35,12 +37,12 @@ export default function RootLayout() {
       <Stack>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="home" options={{ headerShown: false, title: 'Home' }} />
-        <Stack.Screen name="chat" options={{ title: 'OpenCore', headerBackTitle: 'Home' }}>
+        <Stack.Screen name="super-chat" options={{ title: 'OpenCore', headerBackTitle: 'Home' }}>
           <Stack.Header
             style={{
-              backgroundColor: colors.background,
               color: colors.text,
               shadowColor: 'transparent',
+              ...(iosGlass ? null : { backgroundColor: colors.background }),
             }}
           />
         </Stack.Screen>
