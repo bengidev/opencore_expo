@@ -14,7 +14,7 @@ function subscribe() {
 function StaticStage({ children }: { children: ReactNode }) {
   const theme = useTheme();
   return (
-    <View style={[styles.root, { backgroundColor: theme.background }]}>
+    <View style={[styles.root, { backgroundColor: theme.backgroundHero }]}>
       <View style={styles.content} pointerEvents="box-none">
         {children}
       </View>
