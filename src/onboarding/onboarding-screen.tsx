@@ -44,7 +44,7 @@ export function OnboardingScreen() {
             <Animated.View style={entrance.button}>
               <OnboardingStartButton
                 enableShimmer={!isStaticWebRender}
-                onPress={() => router.replace('/super-chat')}
+                onPress={() => router.replace('/home')}
               />
             </Animated.View>
           </SharkGlass>
