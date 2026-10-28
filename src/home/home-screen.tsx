@@ -27,7 +27,7 @@ export function HomeScreen() {
     const trimmed = message.trim();
     if (!trimmed) return;
     setDraft('');
-    router.push({ pathname: '/chat', params: { seed: trimmed } });
+    router.push({ pathname: '/super-chat', params: { seed: trimmed } });
   }
 
   const content = (
@@ -59,7 +59,7 @@ export function HomeScreen() {
                   draft={draft}
                   onDraftChange={setDraft}
                   onSubmit={handleSubmit}
-                  onNewChat={() => router.push('/chat')}
+                  onNewChat={() => router.push('/super-chat')}
                   translucent
                 />
               </SharkGlass>
