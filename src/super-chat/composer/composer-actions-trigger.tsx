@@ -4,7 +4,7 @@ import { AppIcon } from '@/components/app-icon';
 import { LiquidGlassView } from '@/components/liquid-glass-view';
 import { useTheme } from '@/hooks/use-theme';
 
-export type ComposerControlVariant = 'glass' | 'raised';
+export type ComposerControlVariant = 'glass' | 'raised' | 'plain';
 
 export const composerTriggerStyles = StyleSheet.create({
   slot: {
@@ -42,6 +42,23 @@ type ComposerActionsTriggerProps = {
 
 export function ComposerActionsTrigger({ variant, onPress }: ComposerActionsTriggerProps) {
   const theme = useTheme();
+
+  if (variant === 'plain') {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Open actions"
+        testID="composer-actions-trigger"
+        onPress={onPress}
+        hitSlop={4}
+        style={({ pressed }) => [
+          composerTriggerStyles.trigger,
+          pressed && { opacity: 0.55 },
+        ]}>
+        <AppIcon ios="plus" android="add" size={20} color={theme.textSecondary} />
+      </Pressable>
+    );
+  }
 
   if (variant === 'glass') {
     return (

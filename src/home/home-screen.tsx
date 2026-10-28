@@ -2,26 +2,24 @@ import { router } from 'expo-router';
 import { PanelUIProvider } from 'panelui-native/provider';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedView } from '@/components/themed-view';
-import { Radius, Spacing } from '@/constants/theme';
+import { Spacing } from '@/constants/theme';
+import { HomeComposer } from '@/home/home-composer';
+import { HomeHistoryPill } from '@/home/home-history-pill';
+import { HomePrompt } from '@/home/home-greeting';
+import { useHomeEntrance } from '@/home/use-home-entrance';
 import { HOME_SPEECH_LINES } from '@/home/home-content';
-import { SuperChatComposer } from '@/super-chat/composer/super-chat-composer.tsx';
-import { HomeGreeting } from '@/home/home-greeting';
 import { SharkGlass, SharkOceanStage } from '@/onboarding/shark-ocean/shark-ocean-stage';
-import { HOME_COMPOSER_GAP, HOME_EDGE_INSET } from '@/home/home-layout';
-import { SuggestionCarousel } from '@/home/suggestion-carousel';
 
 const isStaticWebRender = Platform.OS === 'web' && typeof window === 'undefined';
 
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const entrance = useHomeEntrance();
   const [draft, setDraft] = useState('');
-
-  function handleSuggestionSelect(suggestion: { title: string }) {
-    setDraft(suggestion.title);
-  }
 
   function handleSubmit(message: string) {
     const trimmed = message.trim();
@@ -31,12 +29,12 @@ export function HomeScreen() {
   }
 
   const content = (
-    <ThemedView style={styles.screen}>
+    <ThemedView type="backgroundHero" style={styles.screen}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}>
-        <SharkOceanStage speechLines={HOME_SPEECH_LINES}>
+        <SharkOceanStage speechLines={HOME_SPEECH_LINES} showSpeech={false}>
           <View
             style={[
               styles.column,
@@ -46,23 +44,23 @@ export function HomeScreen() {
               },
             ]}
             pointerEvents="box-none">
-            <SharkGlass radius={24} style={styles.greetingGlass}>
-              <HomeGreeting />
-            </SharkGlass>
-            <View style={styles.heroSpacer} pointerEvents="none" />
-            <View style={styles.bottom} pointerEvents="box-none">
-              <SharkGlass radius={24}>
-                <SuggestionCarousel onSelect={handleSuggestionSelect} />
+            <View style={styles.topBar} pointerEvents="box-none">
+              <HomeHistoryPill />
+            </View>
+            <View style={styles.center} pointerEvents="box-none">
+              <SharkGlass glass={false} radius={24} style={styles.promptZone}>
+                <Animated.View style={entrance.prompt}>
+                  <HomePrompt />
+                </Animated.View>
               </SharkGlass>
-              <SharkGlass radius={Radius.surface}>
-                <SuperChatComposer
+              <Animated.View style={[styles.composer, entrance.composer]}>
+                <HomeComposer
                   draft={draft}
                   onDraftChange={setDraft}
                   onSubmit={handleSubmit}
                   onNewChat={() => router.push('/super-chat')}
-                  translucent
                 />
-              </SharkGlass>
+              </Animated.View>
             </View>
           </View>
         </SharkOceanStage>
@@ -86,20 +84,26 @@ const styles = StyleSheet.create({
   },
   column: {
     flex: 1,
-    paddingHorizontal: HOME_EDGE_INSET,
-    gap: Spacing.two,
+    paddingHorizontal: Spacing.four,
   },
-  greetingGlass: {
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.two,
+  topBar: {
+    minHeight: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  heroSpacer: {
+  center: {
     flex: 1,
-    minHeight: 120,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: Spacing.three,
+    paddingBottom: 108,
   },
-  bottom: {
-    gap: HOME_COMPOSER_GAP,
-    paddingTop: 0,
-    overflow: 'visible',
+  promptZone: {
+    paddingHorizontal: Spacing.four,
+    paddingVertical: Spacing.three,
+  },
+  composer: {
+    width: '100%',
+    alignItems: 'center',
   },
 });
