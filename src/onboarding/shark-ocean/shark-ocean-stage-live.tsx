@@ -29,6 +29,10 @@ import type { SharkOceanStageProps } from './stage-types';
 
 const SPEECH_HOLD_MS = 5200;
 const SPEECH_FONT = require('@expo-google-fonts/space-mono/700Bold/SpaceMono_700Bold.ttf');
+const SIM_STEP = 1 / 60;
+// A single frame may replay at most this much simulation, so one long stall
+// costs a bounded burst of steps instead of a freeze.
+const MAX_CATCHUP_STEPS = 8;
 
 export function SharkOceanStageLive({
   speechLines,
@@ -231,18 +235,17 @@ export function SharkOceanStageLive({
     let accumulator = 0;
 
     const frame = (now: number) => {
-      const dt = Math.min(0.1, (now - last) / 1000);
+      const elapsed = (now - last) / 1000;
       last = now;
-      accumulator += dt;
-      let steps = 0;
-      while (accumulator >= 1 / 60 && steps < 3) {
-        world.step(1 / 60);
-        accumulator -= 1 / 60;
-        steps++;
+      // Keep the leftover so the world advances by wall time, not by frame count.
+      // Only a real stall, one past the catch-up budget, drops time.
+      accumulator = Math.min(accumulator + Math.max(0, elapsed), SIM_STEP * MAX_CATCHUP_STEPS);
+      while (accumulator >= SIM_STEP) {
+        world.step(SIM_STEP);
+        accumulator -= SIM_STEP;
       }
-      if (steps === 3) accumulator = 0;
 
-      setPicture(renderer.render(world, 1 / 60, font, zoneListRef.current));
+      setPicture(renderer.render(world, SIM_STEP, font, zoneListRef.current));
       updateBubble(world);
       frameId = requestAnimationFrame(frame);
     };
