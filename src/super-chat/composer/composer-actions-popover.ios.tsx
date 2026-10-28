@@ -73,7 +73,7 @@ export function ComposerActionsPopover({
           if (presented) setIsPresented(true);
           else dismiss();
         }}
-        attachmentAnchor="top">
+        attachmentAnchor="bottom">
         <Popover.Trigger>
           <RNHostView matchContents>
             <ComposerActionsTrigger variant={variant} onPress={() => setIsPresented(true)} />
