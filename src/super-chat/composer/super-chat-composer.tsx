@@ -24,9 +24,16 @@ export type SuperChatComposerProps = {
   onDraftChange: (value: string) => void;
   onSubmit: (message: string) => void;
   onNewChat: () => void;
+  translucent?: boolean;
 };
 
-export function SuperChatComposer({ draft, onDraftChange, onSubmit, onNewChat }: SuperChatComposerProps) {
+export function SuperChatComposer({
+  draft,
+  onDraftChange,
+  onSubmit,
+  onNewChat,
+  translucent = false,
+}: SuperChatComposerProps) {
   const theme = useTheme();
   const colorScheme = useColorScheme();
   const cardShadow = colorScheme === 'dark' ? BoxShadow.cardDark : BoxShadow.card;
@@ -73,8 +80,8 @@ export function SuperChatComposer({ draft, onDraftChange, onSubmit, onNewChat }:
         style={[
           styles.shell,
           {
-            backgroundColor: theme.surface,
-            borderColor: theme.border,
+            backgroundColor: translucent ? 'transparent' : theme.surface,
+            borderColor: translucent ? 'transparent' : theme.border,
             boxShadow: cardShadow,
           },
         ]}>
