@@ -46,7 +46,7 @@ const FLAG_MARK = 6;
 const MARK_GLYPHS = "#%@";
 
 // Sub-cell sample offsets for anti-aliased silhouettes.
-const SUBSAMPLES = [0.25, 0.3, 0.75, 0.3, 0.25, 0.72, 0.75, 0.72];
+const EDGE_CUTOFF = 0.2;
 
 /** Classic top-down half-width at s ∈ [0, 1] (snout → tail), as a fraction of length. */
 function classicHalfWidth(s: number) {
@@ -250,6 +250,17 @@ function inTriangle(
   return !(neg && pos);
 }
 
+/** Distance from a point to the line through an edge, in px. */
+function edgeDistance(
+  px: number, py: number,
+  ax: number, ay: number, bx: number, by: number,
+) {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const len = Math.sqrt(dx * dx + dy * dy) || 1;
+  return Math.abs((px - ax) * dy - (py - ay) * dx) / len;
+}
+
 export class SkiaOceanRenderer {
   private cw = 8;
   private ch = 12;
@@ -271,6 +282,14 @@ export class SkiaOceanRenderer {
   private sharkShadow = new Uint8Array(0);
   private spine = new Float32Array(SHARK_NODES * 2);
   private arc = new Float32Array(SHARK_NODES);
+  private segX = new Float32Array(SHARK_NODES - 1);
+  private segY = new Float32Array(SHARK_NODES - 1);
+  private segDx = new Float32Array(SHARK_NODES - 1);
+  private segDy = new Float32Array(SHARK_NODES - 1);
+  private segInv = new Float32Array(SHARK_NODES - 1);
+  private segLen = new Float32Array(SHARK_NODES - 1);
+  private segNx = new Float32Array(SHARK_NODES - 1);
+  private segNy = new Float32Array(SHARK_NODES - 1);
   private arcTotal = 1;
   private shape = SHAPES.classic;
   private sharkId = 0;
@@ -281,6 +300,7 @@ export class SkiaOceanRenderer {
   private hitS = 0;
   private hitV = 0;
   private hitDist = 0;
+  private hitEdge = 0;
 
   private fishStamp = new Uint32Array(0);
   private frameId = 0;
@@ -648,30 +668,46 @@ export class SkiaOceanRenderer {
    * Writes hit* fields and returns whether the point is on the shark.
    */
   private sampleShark(px: number, py: number, L: number) {
-    const { spine, arc } = this;
+    const { spine, arc, segX, segY, segDx, segDy, segInv, segLen, segNx, segNy } = this;
     const N = SHARK_NODES;
+
+    // Seed on the nearest spine node. The nearest point on the polyline always
+    // lies on a segment touching that node, so two segments replace all nineteen.
+    let near = 0;
+    let nearD2 = Infinity;
+    for (let k = 0; k < N; k++) {
+      const dx = px - spine[k * 2];
+      const dy = py - spine[k * 2 + 1];
+      const d2 = dx * dx + dy * dy;
+      if (d2 < nearD2) {
+        nearD2 = d2;
+        near = k;
+      }
+    }
+
     let best = Infinity;
     let bestS = 0;
     let bestSign = 1;
     let bestNx = 0;
     let bestNy = 0;
-    for (let k = 0; k < N - 1; k++) {
-      const ax = spine[k * 2];
-      const ay = spine[k * 2 + 1];
-      const sx = spine[(k + 1) * 2] - ax;
-      const sy = spine[(k + 1) * 2 + 1] - ay;
-      const len2 = sx * sx + sy * sy || 1;
-      const u = clamp(((px - ax) * sx + (py - ay) * sy) / len2, 0, 1);
-      const qx = ax + sx * u;
-      const qy = ay + sy * u;
-      const d2 = (px - qx) ** 2 + (py - qy) ** 2;
+    const k0 = near > 0 ? near - 1 : 0;
+    const k1 = near < N - 1 ? near : N - 2;
+    for (let k = k0; k <= k1; k++) {
+      const ax = segX[k];
+      const ay = segY[k];
+      const sx = segDx[k];
+      const sy = segDy[k];
+      const inv = segInv[k];
+      const u = clamp(((px - ax) * sx + (py - ay) * sy) * inv, 0, 1);
+      const ex = px - (ax + sx * u);
+      const ey = py - (ay + sy * u);
+      const d2 = ex * ex + ey * ey;
       if (d2 < best) {
         best = d2;
-        const len = Math.sqrt(len2);
-        bestS = (arc[k] + u * len) / this.arcTotal;
+        bestS = (arc[k] + u * segLen[k]) / this.arcTotal;
         bestSign = sx * (py - ay) - sy * (px - ax) >= 0 ? 1 : -1;
-        bestNx = (-sy / len) * bestSign;
-        bestNy = (sx / len) * bestSign;
+        bestNx = segNx[k] * bestSign;
+        bestNy = segNy[k] * bestSign;
       }
     }
 
@@ -683,6 +719,7 @@ export class SkiaOceanRenderer {
     this.hitDist = a;
     this.hitS = s;
     this.hitV = a * bestSign;
+    this.hitEdge = w - a;
 
     const head = this.shape.head;
     if (head && u < L * (head.sweep + head.depth + head.notch)) {
@@ -693,6 +730,7 @@ export class SkiaOceanRenderer {
       const front = L * head.sweep * r * r + L * head.notch * Math.max(0, 1 - r / 0.14);
       // Full depth almost to the tips, so the wing reads as a solid bar rather than a thin line.
       const depth = L * head.depth * (1 - 0.2 * r * r * r * r);
+      this.hitEdge = Math.min(span - a, u - front, front + depth - u);
       if (r <= 1 && u >= front && u <= front + depth) {
         this.hitFlag = r > 0.84 ? FLAG_EYE : FLAG_BODY;
         this.hitShade = r > 0.84 ? 0 : 0.62 - 0.2 * r + (u < front + L * 0.012 ? 0.1 : 0);
@@ -739,6 +777,7 @@ export class SkiaOceanRenderer {
       // Falcate (sickle) fins get a concave trailing edge.
       !(shape.falcate && inTriangle(u, a, L * p1, 0, L * (p1 + (p2 - p1) * 0.33), tip * 0.55, L * p2, tip))
     ) {
+      this.hitEdge = this.edgeAcross(u, a, L * p0, 0, L * p1, 0, L * p2, tip);
       this.hitFlag = this.marked(s, a * bestSign, L, 0) ? FLAG_MARK : FLAG_FIN;
       this.hitShade = 0.38 + 0.22 * (1 - clamp(a / tip, 0, 1));
       return true;
@@ -749,11 +788,32 @@ export class SkiaOceanRenderer {
       // Forked caudal fin.
       (shape.caudal > 0 && inTriangle(u, a, L * 0.86, 0, L * 0.95, 0, L, L * shape.caudal))
     ) {
+      this.hitEdge = this.edgeAcross(u, a, L * v0, 0, L * v1, 0, L * v2, L * vr);
       this.hitFlag = FLAG_FIN;
       this.hitShade = 0.36;
       return true;
     }
+    // A miss leaves hitEdge at the body distance, so cells just outside the
+    // silhouette still get a fractional glyph instead of vanishing.
     return false;
+  }
+
+  /** Distance from a point inside a triangle to its nearest edge, in px. */
+  private edgeAcross(
+    u: number,
+    a: number,
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+  ) {
+    return Math.min(
+      edgeDistance(u, a, x0, y0, x1, y1),
+      edgeDistance(u, a, x1, y1, x2, y2),
+      edgeDistance(u, a, x2, y2, x0, y0),
+    );
   }
 
   /** Whether a body point (s along, v across) falls on a dark marking. */
@@ -815,11 +875,30 @@ export class SkiaOceanRenderer {
       }
       arc[0] = 0;
       for (let k = 1; k < N; k++) {
-        arc[k] =
-          arc[k - 1] +
-          Math.hypot(spine[k * 2] - spine[(k - 1) * 2], spine[k * 2 + 1] - spine[(k - 1) * 2 + 1]);
+        const dx = spine[k * 2] - spine[(k - 1) * 2];
+        const dy = spine[k * 2 + 1] - spine[(k - 1) * 2 + 1];
+        arc[k] = arc[k - 1] + Math.sqrt(dx * dx + dy * dy);
       }
       this.arcTotal = arc[N - 1] || 1;
+
+      // Flatten the segments once per shark so the per-cell test reads arrays
+      // instead of rebuilding each segment's length and normal.
+      for (let k = 0; k < N - 1; k++) {
+        const ax = spine[k * 2];
+        const ay = spine[k * 2 + 1];
+        const sx = spine[(k + 1) * 2] - ax;
+        const sy = spine[(k + 1) * 2 + 1] - ay;
+        const len = Math.sqrt(sx * sx + sy * sy) || 1;
+        const inv = 1 / len;
+        this.segX[k] = ax;
+        this.segY[k] = ay;
+        this.segDx[k] = sx;
+        this.segDy[k] = sy;
+        this.segLen[k] = len;
+        this.segInv[k] = inv;
+        this.segNx[k] = -sy * inv;
+        this.segNy[k] = sx * inv;
+      }
 
       // Bank into turns: the inside fin foreshortens, the outside one spreads.
       const bank = clamp(sh.turn * 0.45, -0.35, 0.35);
@@ -849,23 +928,35 @@ export class SkiaOceanRenderer {
       const shadowDc = Math.round((L * 0.035) / cw) + 1;
       const shadowDr = Math.round((L * 0.02) / ch) + 1;
 
+      // The axis-aligned box wastes its corners on a diagonal shark. Test cells
+      // against the body's own axis first, which is a few multiplies per cell.
+      const midX = (spine[0] + spine[(N - 1) * 2]) * 0.5;
+      const midY = (spine[1] + spine[(N - 1) * 2 + 1]) * 0.5;
+      const chordX = spine[(N - 1) * 2] - spine[0];
+      const chordY = spine[(N - 1) * 2 + 1] - spine[1];
+      const chordLen = Math.sqrt(chordX * chordX + chordY * chordY) || 1;
+      const ux = chordX / chordLen;
+      const uy = chordY / chordLen;
+      const halfChord = chordLen * 0.5 + reach;
+
       for (let r = r0; r <= r1; r++) {
         for (let c = c0; c <= c1; c++) {
           const x = c * cw;
           const y = r * ch;
+          const ox = x + cw / 2 - midX;
+          const oy = y + ch / 2 - midY;
+          if (Math.abs(ox * ux + oy * uy) > halfChord || Math.abs(oy * ux - ox * uy) > reach) continue;
           const centerHit = this.sampleShark(x + cw / 2, y + ch / 2, L);
           if (!centerHit && this.hitDist > skipBeyond) continue;
           const flag = this.hitFlag;
           const shade = this.hitShade;
           const s = this.hitS;
           const v = this.hitV;
-
-          let hits = centerHit ? 1 : 0;
-          for (let k = 0; k < SUBSAMPLES.length; k += 2) {
-            if (this.sampleShark(x + SUBSAMPLES[k] * cw, y + SUBSAMPLES[k + 1] * ch, L)) hits++;
-          }
-          if (hits === 0) continue;
-          const coverage = hits / 5;
+          // The signed distance to the silhouette gives the glyph coverage directly,
+          // so one sample per cell replaces the supersample fan. The half-cell bias
+          // restores the dilation the fan used to provide at the silhouette edge.
+          const coverage = clamp(0.8 + this.hitEdge / ch, 0, 1);
+          if (coverage < EDGE_CUTOFF) continue;
 
           const i = r * cols + c;
           // Body-anchored key so each glyph rides along with the skin.
