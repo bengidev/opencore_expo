@@ -9,10 +9,12 @@ export const GlassZoneContext = createContext<RegisterGlassZone | null>(null);
 
 export function SharkGlass({
   children,
+  glass = true,
   radius = 24,
   style,
 }: {
   children: ReactNode;
+  glass?: boolean;
   radius?: number;
   style?: StyleProp<ViewStyle>;
 }) {
@@ -23,10 +25,10 @@ export function SharkGlass({
   const report = useCallback(() => {
     ref.current?.measureInWindow((x, y, width, height) => {
       if (width > 0 && height > 0) {
-        register?.(id, { x, y, width, height, radius });
+        register?.(id, { x, y, width, height, radius, glass });
       }
     });
-  }, [id, radius, register]);
+  }, [glass, id, radius, register]);
 
   useEffect(() => () => register?.(id, null), [id, register]);
 

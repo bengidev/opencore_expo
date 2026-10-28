@@ -19,8 +19,8 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTheme } from '@/hooks/use-theme';
 import { placeBubble } from './bubble-placement';
 import { GlassZoneContext, type RegisterGlassZone } from './glass-zone';
+import { oceanGrid } from './grid';
 import { createSharkRoster } from './hero-roster';
-import { clamp } from './math';
 import { OceanSpeechBubble } from './ocean-speech-bubble';
 import { SkiaOceanRenderer } from './skia-renderer';
 import type { GlassZone } from './types';
@@ -28,26 +28,20 @@ import { World } from './world';
 import type { SharkOceanStageProps } from './stage-types';
 
 const SPEECH_HOLD_MS = 5200;
-const SPEECH_FONT = require('@expo-google-fonts/space-mono/400Regular/SpaceMono_400Regular.ttf');
+const SPEECH_FONT = require('@expo-google-fonts/space-mono/700Bold/SpaceMono_700Bold.ttf');
 
-function gridFor(width: number) {
-  const cellWidth = clamp(Math.round(width / 124), 8, 13);
-  const cellHeight = Math.round(cellWidth * 1.45);
-  return {
-    cellWidth,
-    cellHeight,
-    fontSize: Math.max(9, Math.round(cellHeight * 0.74)),
-  };
-}
-
-export function SharkOceanStageLive({ speechLines, children }: SharkOceanStageProps) {
+export function SharkOceanStageLive({
+  speechLines,
+  showSpeech = true,
+  children,
+}: SharkOceanStageProps) {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const reducedMotion = useReducedMotion() ?? false;
   const [heroes] = useState(() => createSharkRoster());
   const [size, setSize] = useState({ width: 0, height: 0 });
-  const { fontSize } = gridFor(size.width || 390);
+  const { fontSize } = oceanGrid(size.width || 390);
   const font = useFont(SPEECH_FONT, fontSize);
   const [picture, setPicture] = useState<SkPicture | null>(null);
   const [focused, setFocused] = useState(true);
@@ -147,6 +141,7 @@ export function SharkOceanStageLive({ speechLines, children }: SharkOceanStagePr
 
   const updateBubble = useCallback(
     (world: World) => {
+      if (!showSpeech) return;
       const current = speechRef.current;
       const hero = heroes[current.speakerIndex];
       const shark = hero ? world.sharks.find((candidate) => candidate.id === hero.id) : null;
@@ -211,6 +206,7 @@ export function SharkOceanStageLive({ speechLines, children }: SharkOceanStagePr
       heroes,
       insets.bottom,
       insets.top,
+      showSpeech,
       size.height,
       size.width,
     ],
@@ -279,7 +275,7 @@ export function SharkOceanStageLive({ speechLines, children }: SharkOceanStagePr
   return (
     <GlassZoneContext.Provider value={registerZone}>
       <View
-        style={[styles.root, { backgroundColor: theme.background }]}
+        style={[styles.root, { backgroundColor: theme.backgroundHero }]}
         onLayout={({ nativeEvent: { layout } }) => {
           setSize((current) =>
             current.width === layout.width && current.height === layout.height
@@ -300,19 +296,21 @@ export function SharkOceanStageLive({ speechLines, children }: SharkOceanStagePr
         <View style={styles.content} pointerEvents="box-none">
           {children}
         </View>
-        <Animated.View
-          pointerEvents={bubbleVisible ? 'box-none' : 'none'}
-          style={[styles.bubbleLayer, bubbleStyle]}>
-          <OceanSpeechBubble
-            message={message}
-            revision={speech.revision}
-            maxWidth={Math.min(260, Math.max(180, size.width - 32))}
-            placement={bubblePlacement}
-            tailLeft={bubbleTailX}
-            onLayout={handleBubbleLayout}
-            onPress={advanceSpeech}
-          />
-        </Animated.View>
+        {showSpeech ? (
+          <Animated.View
+            pointerEvents={bubbleVisible ? 'box-none' : 'none'}
+            style={[styles.bubbleLayer, bubbleStyle]}>
+            <OceanSpeechBubble
+              message={message}
+              revision={speech.revision}
+              maxWidth={Math.min(260, Math.max(180, size.width - 32))}
+              placement={bubblePlacement}
+              tailLeft={bubbleTailX}
+              onLayout={handleBubbleLayout}
+              onPress={advanceSpeech}
+            />
+          </Animated.View>
+        ) : null}
       </View>
     </GlassZoneContext.Provider>
   );

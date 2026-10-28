@@ -169,7 +169,7 @@ export class World {
     const top = this.fishTop();
     const floor = this.fishFloor();
     const minSide = Math.min(W, H);
-    const baseLength = clamp(minSide * 0.44, 170, 430);
+    const baseLength = clamp(minSide * 0.68, 220, 600);
     const sharkCount = this.sharkSpecs.length;
 
     this.sharks = [];
@@ -212,7 +212,7 @@ export class World {
     // Smaller (farther) sharks draw first so the big one swims over them.
     this.sharks.sort((a, b) => a.length - b.length);
 
-    const total = this.fishCount ?? clamp(Math.round((W * H) / 3600), 110, 340);
+    const total = this.fishCount ?? clamp(Math.round((W * H) / 5200), 70, 240);
     this.fish = [];
     while (this.fish.length < total) {
       const species = pickSpecies();
@@ -600,7 +600,7 @@ export class World {
       sh.heading += turned;
       sh.turn += (turned / dt - sh.turn) * Math.min(1, dt * 3);
 
-      const cruise = 30 + L * 0.04;
+      const cruise = 26 + L * 0.03;
       const targetSpeed = hunting ? cruise * (1.45 + closing * 1.5) : cruise;
       sh.speed += (targetSpeed - sh.speed) * Math.min(1, dt * 1.1);
       sh.phase += dt * (2 + sh.speed / 24);

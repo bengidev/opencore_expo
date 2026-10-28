@@ -1,6 +1,7 @@
 export const Colors = {
   light: {
     background: '#F5F5F5',
+    backgroundHero: '#F2F1EC',
     surface: '#FFFFFF',
     surfaceRaised: '#F0F0F0',
     border: '#E8E8E8',
@@ -14,6 +15,7 @@ export const Colors = {
   },
   dark: {
     background: '#000000',
+    backgroundHero: '#0C0C0B',
     surface: '#111111',
     surfaceRaised: '#1A1A1A',
     border: '#222222',

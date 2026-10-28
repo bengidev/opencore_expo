@@ -4,4 +4,5 @@ export type GlassZone = {
   width: number;
   height: number;
   radius?: number;
+  glass?: boolean;
 };
