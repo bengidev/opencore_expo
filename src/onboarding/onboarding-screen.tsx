@@ -6,9 +6,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
-import { HeroInteractionStage } from '@/onboarding/hero-interaction-stage';
 import { OnboardingHeadline } from '@/onboarding/headline';
-import { ONBOARDING_SPEECH_LINES } from '@/onboarding/speech-bubble';
+import { SharkGlass, SharkOceanStage } from '@/onboarding/shark-ocean/shark-ocean-stage';
+import { ONBOARDING_SPEECH_LINES } from '@/onboarding/speech-lines';
 import { OnboardingStartButton } from '@/onboarding/start-button';
 import { OnboardingSubtitle } from '@/onboarding/subtitle';
 import { useOnboardingEntrance } from '@/onboarding/use-entrance';
@@ -20,7 +20,8 @@ export function OnboardingScreen() {
   const entrance = useOnboardingEntrance();
 
   const content = (
-      <ThemedView style={styles.screen}>
+    <ThemedView style={styles.screen}>
+      <SharkOceanStage speechLines={ONBOARDING_SPEECH_LINES}>
         <View
           style={[
             styles.column,
@@ -28,26 +29,28 @@ export function OnboardingScreen() {
               paddingTop: insets.top + Spacing.five,
               paddingBottom: Math.max(insets.bottom, Spacing.four),
             },
-          ]}>
-        <Animated.View style={entrance.headline}>
-          <OnboardingHeadline />
-        </Animated.View>
-        <HeroInteractionStage
-          speechLines={ONBOARDING_SPEECH_LINES}
-          heroWrapperStyle={entrance.hero}
-          speechWrapperStyle={entrance.speech}
-        />
-        <Animated.View style={entrance.subtitle}>
-          <OnboardingSubtitle />
-        </Animated.View>
-        <Animated.View style={entrance.button}>
-          <OnboardingStartButton
-            enableShimmer={!isStaticWebRender}
-            onPress={() => router.replace('/home')}
-          />
-        </Animated.View>
+          ]}
+          pointerEvents="box-none">
+          <SharkGlass radius={24} style={styles.headlineGlass}>
+            <Animated.View style={entrance.headline}>
+              <OnboardingHeadline />
+            </Animated.View>
+          </SharkGlass>
+          <View style={styles.heroSpacer} pointerEvents="none" />
+          <SharkGlass radius={24} style={styles.copyGlass}>
+            <Animated.View style={entrance.subtitle}>
+              <OnboardingSubtitle />
+            </Animated.View>
+            <Animated.View style={entrance.button}>
+              <OnboardingStartButton
+                enableShimmer={!isStaticWebRender}
+                onPress={() => router.replace('/home')}
+              />
+            </Animated.View>
+          </SharkGlass>
         </View>
-      </ThemedView>
+      </SharkOceanStage>
+    </ThemedView>
   );
 
   if (isStaticWebRender) {
@@ -65,5 +68,17 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: Spacing.four,
     gap: Spacing.four,
+  },
+  headlineGlass: {
+    paddingHorizontal: Spacing.three,
+    paddingVertical: Spacing.two,
+  },
+  heroSpacer: {
+    flex: 1,
+    minHeight: 120,
+  },
+  copyGlass: {
+    padding: Spacing.three,
+    gap: Spacing.three,
   },
 });
