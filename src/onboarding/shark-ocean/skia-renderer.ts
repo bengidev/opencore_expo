@@ -30,6 +30,9 @@ import {
 
 const FISH_ALPHAS = [0.22, 0.34, 0.48, 0.64, 0.82];
 
+/** Fraction of a glass pane a hero must fill before the pane is fully opaque. */
+const GLASS_COVER_FRACTION = 0.25;
+
 /**
  * The ocean draws in palette ink only. Resolving every token once at module load
  * keeps the per-frame paint calls allocation-free.
@@ -528,11 +531,13 @@ export class SkiaOceanRenderer {
     canvas.restore();
 
     for (const zone of this.glassZones) {
-      if (zone.glass === false || !this.zoneOccupied(zone)) continue;
+      const cover = this.zoneCoverage(zone);
+      if (cover === 0) continue;
       canvas.save();
       canvas.clipRRect(this.rrect(zone), ClipOp.Intersect, true);
       const blur = Skia.Paint();
       blur.setImageFilter(Skia.ImageFilter.MakeBlur(6, 6, TileMode.Decal, null));
+      blur.setAlphaf(cover);
       canvas.saveLayer(blur);
       canvas.drawPicture(sharks);
       canvas.restore();
@@ -540,24 +545,32 @@ export class SkiaOceanRenderer {
     }
   }
 
-  private zoneOccupied(zone: GlassZone) {
+  /**
+   * How far the hero has swum into the pane, 0–1. The pane (frost, blur, border)
+   * only exists while a hero is inside the zone, and it fades over the quarter of
+   * the zone the hero covers, so the border never pops.
+   */
+  private zoneCoverage(zone: GlassZone) {
+    if (zone.glass === false) return 0;
     const { cols, rows, cw, ch, sharkFlag } = this;
     const c0 = Math.max(0, Math.floor(zone.x / cw));
     const c1 = Math.min(cols - 1, Math.floor((zone.x + zone.width) / cw));
     const r0 = Math.max(0, Math.floor(zone.y / ch));
     const r1 = Math.min(rows - 1, Math.floor((zone.y + zone.height) / ch));
+    const total = (c1 - c0 + 1) * (r1 - r0 + 1);
+    if (total <= 0) return 0;
+    let filled = 0;
     for (let r = r0; r <= r1; r++) {
       for (let c = c0; c <= c1; c++) {
-        const i = r * cols + c;
-        if (!sharkFlag[i]) continue;
+        if (!sharkFlag[r * cols + c]) continue;
         const x = c * cw + cw / 2;
         const y = r * ch + ch / 2;
         if (x >= zone.x && x <= zone.x + zone.width && y >= zone.y && y <= zone.y + zone.height) {
-          return true;
+          filled += 1;
         }
       }
     }
-    return false;
+    return Math.min(1, filled / (total * GLASS_COVER_FRACTION));
   }
 
   private drawHalo(canvas: SkCanvas) {
@@ -591,15 +604,12 @@ export class SkiaOceanRenderer {
 
   private drawGlass(canvas: SkCanvas) {
     for (const zone of this.glassZones) {
-      if (zone.glass === false || !this.zoneOccupied(zone)) continue;
+      const cover = this.zoneCoverage(zone);
+      if (cover === 0) continue;
       const rrect = this.rrect(zone);
-      this.fillPaint.setColor(
-        this.light ? this.color(245, 245, 245, 0.68) : this.color(0, 0, 0, 0.64),
-      );
+      this.fillPaint.setColor(this.color(...this.ink.surface, 0.5 * cover));
       canvas.drawRRect(rrect, this.fillPaint);
-      this.strokePaint.setColor(
-        this.light ? this.color(0, 0, 0, 0.08) : this.color(255, 255, 255, 0.1),
-      );
+      this.strokePaint.setColor(this.color(...this.ink.borderVisible, 0.6 * cover));
       canvas.drawRRect(rrect, this.strokePaint);
     }
   }
