@@ -20,11 +20,34 @@ import { oceanGrid } from "./grid";
 import { clamp, hash3, smoothstep } from "./math";
 import { SHARK_NODES, type Shark, type SharkKind, type World } from "./world";
 import type { GlassZone } from "./types";
+import {
+  hexToRgb255,
+  NothingStatus,
+  NothingTokens,
+  type NothingMode,
+  type NothingModeToken,
+} from "@/constants/palette";
 
 const FISH_ALPHAS = [0.22, 0.34, 0.48, 0.64, 0.82];
 
-const LIGHT_ACCENTS = ["#a88674", "#7d927f", "#7f8fae", "#b19b83", "#9d9475"];
-const DARK_ACCENTS = ["#e0892c", "#e03a32", "#b44ae0", "#33c8cc", "#3cb54a", "#3150e8", "#d9c14a"];
+/**
+ * The ocean draws in palette ink only. Resolving every token once at module load
+ * keeps the per-frame paint calls allocation-free.
+ */
+type InkTriple = [number, number, number];
+
+function resolveInk(tokens: (typeof NothingTokens)[NothingMode]) {
+  const ink = {} as Record<NothingModeToken, InkTriple>;
+  for (const [role, hex] of Object.entries(tokens)) {
+    ink[role as NothingModeToken] = hexToRgb255(hex);
+  }
+  return ink;
+}
+
+const INK = { light: resolveInk(NothingTokens.light), dark: resolveInk(NothingTokens.dark) };
+
+/** Glints are the only colour event in the ocean: one accent, never a rainbow. */
+const GLINT_ACCENTS = [NothingStatus.accent];
 const ACCENT_CHANCE = 0.018;
 
 // Sparse glyphs on bright skin, dense glyphs in shadow, so the texture
@@ -79,8 +102,6 @@ interface SharkShape {
   eye: [number, number] | null;
   /** Five gill slits. */
   gills: [number, number];
-  /** Per-channel skin tint, kept subtle in the light palette. */
-  tint: [number, number, number];
 }
 
 const SHAPES: Record<SharkKind, SharkShape> = {
@@ -94,7 +115,6 @@ const SHAPES: Record<SharkKind, SharkShape> = {
     secondDorsal: [0.71, 0.76],
     eye: [0.1, 0.14],
     gills: [0.19, 0.29],
-    tint: [0.92, 0.97, 1.05],
   },
   // Slim neck under a wide, swept-back cephalofoil (drawn in sampleShark),
   // tall first dorsal, long upper tail lobe. Bronze-olive grey.
@@ -113,7 +133,6 @@ const SHAPES: Record<SharkKind, SharkShape> = {
     secondDorsal: [0.7, 0.74],
     eye: null,
     gills: [0.16, 0.26],
-    tint: [0.96, 0.98, 0.9],
   },
   // Blunt, square snout on a heavy body; barred back. Warm grey-brown.
   tiger: {
@@ -132,7 +151,6 @@ const SHAPES: Record<SharkKind, SharkShape> = {
     secondDorsal: [0.71, 0.75],
     eye: [0.08, 0.12],
     gills: [0.19, 0.28],
-    tint: [1.02, 0.95, 0.84],
   },
   // Short rounded head, body done by half-length, then a long ribbon of a
   // tail fin. Broad rounded pectorals, spotted sandy skin.
@@ -152,7 +170,6 @@ const SHAPES: Record<SharkKind, SharkShape> = {
     secondDorsal: [0.49, 0.53],
     eye: [0.06, 0.09],
     gills: [0.13, 0.2],
-    tint: [1.08, 0.97, 0.74],
   },
   // Great hammerhead: a broader, nearly straight-edged cephalofoil with a notch at the centre,
   // a towering sickle first dorsal (drawn long and bright from above), and a cooler slate skin.
@@ -171,7 +188,6 @@ const SHAPES: Record<SharkKind, SharkShape> = {
     secondDorsal: [0.68, 0.74],
     eye: null,
     gills: [0.15, 0.25],
-    tint: [0.86, 0.93, 1.02],
   },
   // Shortfin mako: a long conical snout, a torpedo body that narrows hard to the tail stalk,
   // and a tall crescent tail. Metallic indigo back.
@@ -191,7 +207,6 @@ const SHAPES: Record<SharkKind, SharkShape> = {
     secondDorsal: [0.76, 0.79],
     eye: [0.11, 0.15],
     gills: [0.2, 0.3],
-    tint: [0.78, 0.9, 1.2],
   },
   // Thresher: a compact body over the front half, then the upper tail lobe as a long whip
   // that's as long as the shark itself. Big eyes, long sickle pectorals, bronze-violet skin.
@@ -212,7 +227,6 @@ const SHAPES: Record<SharkKind, SharkShape> = {
     secondDorsal: [0.45, 0.47],
     eye: [0.05, 0.1],
     gills: [0.11, 0.18],
-    tint: [1.0, 0.9, 1.08],
   },
   // Nurse shark: a blunt, broad head, a heavy flattened body with both dorsals set far back,
   // rounded paddle pectorals, and a long low tail with no lower lobe. Tawny brown.
@@ -232,7 +246,6 @@ const SHAPES: Record<SharkKind, SharkShape> = {
     secondDorsal: [0.63, 0.69],
     eye: [0.05, 0.075],
     gills: [0.14, 0.22],
-    tint: [1.1, 0.96, 0.76],
   },
 };
 
@@ -269,6 +282,11 @@ export class SkiaOceanRenderer {
   private width = 0;
   private height = 0;
   private light = false;
+
+  /** Palette ink for the active mode. */
+  private get ink() {
+    return INK[this.light ? "light" : "dark"];
+  }
 
   private energy = new Float32Array(0);
   private energyTmp = new Float32Array(0);
@@ -410,7 +428,7 @@ export class SkiaOceanRenderer {
   private drawPaper(canvas: SkCanvas) {
     const lineStep = 10;
     this.strokePaint.setColor(
-      this.light ? this.color(38, 37, 32, 0.015) : this.color(255, 255, 250, 0.028),
+      this.color(...this.ink.text, this.light ? 0.015 : 0.028),
     );
     this.strokePaint.setStrokeWidth(1);
     for (let x = 0; x <= this.width; x += lineStep) {
@@ -421,7 +439,7 @@ export class SkiaOceanRenderer {
     }
 
     this.strokePaint.setColor(
-      this.light ? this.color(38, 37, 32, 0.03) : this.color(255, 255, 250, 0.045),
+      this.color(...this.ink.text, this.light ? 0.03 : 0.045),
     );
     for (let x = 0; x <= this.width; x += lineStep * 5) {
       canvas.drawLine(x, 0, x, this.height, this.strokePaint);
@@ -431,7 +449,7 @@ export class SkiaOceanRenderer {
     }
 
     this.fillPaint.setColor(
-      this.light ? this.color(40, 39, 33, 0.07) : this.color(255, 255, 248, 0.06),
+      this.color(...this.ink.text, this.light ? 0.07 : 0.06),
     );
     const dotStep = 20;
     for (let y = 5; y < this.height; y += dotStep) {
@@ -443,7 +461,7 @@ export class SkiaOceanRenderer {
 
   private drawWake(canvas: SkCanvas) {
     const { cols, cw, ch, energy } = this;
-    const tone = this.light ? [96, 94, 86] : [220, 218, 210];
+    const tone = this.light ? this.ink.textSecondary : this.ink.text;
     for (let i = 0; i < energy.length; i++) {
       const e = energy[i];
       if (e < 0.5) continue;
@@ -474,7 +492,7 @@ export class SkiaOceanRenderer {
 
   private drawFish(canvas: SkCanvas) {
     const { cols, cw, ch, fishBuckets } = this;
-    const tone = this.light ? [118, 116, 106] : [186, 186, 178];
+    const tone = this.ink.textSecondary;
     for (let bucket = 0; bucket < fishBuckets.length; bucket++) {
       const cells = fishBuckets[bucket];
       if (!cells.length) continue;
@@ -548,16 +566,16 @@ export class SkiaOceanRenderer {
     const radius = Math.max(this.width, this.height) * 0.44;
     const colors = this.light
       ? [
-          this.color(252, 251, 246, 0.8),
-          this.color(252, 251, 246, 0.4),
-          this.color(252, 251, 246, 0.08),
-          this.color(252, 251, 246, 0),
+          this.color(...this.ink.canvas, 0.8),
+          this.color(...this.ink.canvas, 0.4),
+          this.color(...this.ink.canvas, 0.08),
+          this.color(...this.ink.canvas, 0),
         ]
       : [
-          this.color(10, 10, 9, 0.66),
-          this.color(10, 10, 9, 0.32),
-          this.color(10, 10, 9, 0.08),
-          this.color(10, 10, 9, 0),
+          this.color(...this.ink.canvas, 0.66),
+          this.color(...this.ink.canvas, 0.32),
+          this.color(...this.ink.canvas, 0.08),
+          this.color(...this.ink.canvas, 0),
         ];
     paint.setShader(
       Skia.Shader.MakeRadialGradient(
@@ -982,9 +1000,9 @@ export class SkiaOceanRenderer {
   }
 
   private drawSharkCells(canvas: SkCanvas, font: SkFont) {
-    const { cols, rows, cw, ch, sharkFlag, sharkShade, sharkKey, sharkDepth, sharkKind } = this;
+    const { cols, rows, cw, ch, sharkFlag, sharkShade, sharkKey, sharkDepth } = this;
     const n = cols * rows;
-    const accents = this.light ? LIGHT_ACCENTS : DARK_ACCENTS;
+    const accents = GLINT_ACCENTS;
     for (let i = 0; i < n; i++) {
       const flag = sharkFlag[i];
       if (!flag) continue;
@@ -995,10 +1013,6 @@ export class SkiaOceanRenderer {
       const key = sharkKey[i];
       const shade = sharkShade[i];
       const dim = 0.92 + 0.08 * sharkDepth[i];
-      const tint = SHAPES[KINDS[sharkKind[i]]].tint;
-      const tr = 1 + (tint[0] - 1) * 0.45;
-      const tg = 1 + (tint[1] - 1) * 0.45;
-      const tb = 1 + (tint[2] - 1) * 0.45;
 
       const tick = Math.floor(this.frameId * 0.04 + (key % 997) / 97);
       const roll = hash3(key, tick, 7);
@@ -1011,7 +1025,7 @@ export class SkiaOceanRenderer {
         this.textPaint.setColor(
           roll < ACCENT_CHANCE * 3
             ? Skia.Color(accent)
-            : this.color(tone * tr, tone * tg, tone * tb, this.light ? 0.9 : 1),
+            : this.color(tone, tone, tone, this.light ? 0.9 : 1),
         );
         this.glyph(canvas, font, set[(key >>> 8) % set.length], x + cw / 2, y + ch / 2 + 1);
         continue;
@@ -1037,24 +1051,29 @@ export class SkiaOceanRenderer {
         glyph = SKIN_RAMP[clamp(Math.floor((1 - shade) * 8.99) + jitter, 0, SKIN_RAMP.length - 1)];
       }
       level *= dim;
-      this.fillPaint.setColor(
-        this.color(
-          Math.max(0, Math.min(255, Math.round(level * tr))),
-          Math.max(0, Math.min(255, Math.round(level * tg))),
-          Math.max(0, Math.min(255, Math.round(level * tb))),
-        ),
-      );
+      const grey = Math.max(0, Math.min(255, Math.round(level)));
+      this.fillPaint.setColor(this.color(grey, grey, grey));
       canvas.drawRect({ x: x + 1, y: y + 1, width: cw - 1, height: ch - 1 }, this.fillPaint);
 
-      if (flag === FLAG_EYE) this.textPaint.setColor(Skia.Color(this.light ? "#fbfaf5" : "#9aa0ad"));
-      else if (flag === FLAG_MARK) this.textPaint.setColor(Skia.Color(this.light ? "#f4f3ee" : "#464646"));
+      if (flag === FLAG_EYE)
+        this.textPaint.setColor(
+          Skia.Color(this.light ? NothingTokens.light.surface : NothingTokens.dark.textDisabled),
+        );
+      else if (flag === FLAG_MARK)
+        this.textPaint.setColor(
+          Skia.Color(this.light ? NothingTokens.light.surface : NothingTokens.dark.borderVisible),
+        );
       else if (roll < ACCENT_CHANCE) this.textPaint.setColor(Skia.Color(accent));
-      else if (!this.light && roll < ACCENT_CHANCE * 2) this.textPaint.setColor(Skia.Color("#ffffff"));
+      else if (!this.light && roll < ACCENT_CHANCE * 2)
+        this.textPaint.setColor(Skia.Color(NothingTokens.dark.surface));
       else if (this.light) {
         const glyphTone = Math.round(28 + (1 - shade) * 28);
         this.textPaint.setColor(this.color(glyphTone, glyphTone, glyphTone, 0.96));
       } else {
-        this.textPaint.setColor(Skia.Color(shade > 0.55 ? "#0e0f13" : "#1b1d24"));
+        // Negative space, not ink: the glyph cuts into the lit cell.
+        this.textPaint.setColor(
+          Skia.Color(shade > 0.55 ? NothingTokens.dark.canvas : NothingTokens.dark.surfaceRaised),
+        );
       }
       this.glyph(canvas, font, glyph, x + cw / 2, y + ch / 2 + 1);
     }
