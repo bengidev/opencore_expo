@@ -278,7 +278,7 @@ export function SharkOceanStageLive({
   return (
     <GlassZoneContext.Provider value={registerZone}>
       <View
-        style={[styles.root, { backgroundColor: theme.backgroundHero }]}
+        style={[styles.root, { backgroundColor: theme.background }]}
         onLayout={({ nativeEvent: { layout } }) => {
           setSize((current) =>
             current.width === layout.width && current.height === layout.height
