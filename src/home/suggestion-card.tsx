@@ -4,9 +4,8 @@ import { Pressable, StyleSheet } from 'react-native';
 import Animated, { cubicBezier, useReducedMotion } from 'react-native-reanimated';
 
 import { ThemedText } from '@/components/themed-text';
-import { BoxShadow, Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import type { HomeSuggestion } from '@/home/home-content';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useTheme } from '@/hooks/use-theme';
 
 const PRESS_EASE = cubicBezier(0.23, 1, 0.32, 1);
@@ -18,8 +17,6 @@ type SuggestionCardProps = {
 
 export function SuggestionCard({ suggestion, onPress }: SuggestionCardProps) {
   const theme = useTheme();
-  const colorScheme = useColorScheme();
-  const cardShadow = colorScheme === 'dark' ? BoxShadow.cardDark : BoxShadow.card;
   const reducedMotion = useReducedMotion();
   const [pressed, setPressed] = useState(false);
 
@@ -40,7 +37,6 @@ export function SuggestionCard({ suggestion, onPress }: SuggestionCardProps) {
           {
             backgroundColor: theme.surface,
             borderColor: theme.border,
-            boxShadow: cardShadow,
           },
           reducedMotion
             ? {
@@ -76,7 +72,7 @@ const styles = StyleSheet.create({
   card: {
     minHeight: 88,
     borderWidth: 1,
-    borderRadius: Radius.surface,
+    borderRadius: Radius.card,
     borderCurve: 'continuous',
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.three,

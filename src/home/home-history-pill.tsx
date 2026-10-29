@@ -5,14 +5,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppIcon } from '@/components/app-icon';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Radius, Scrim, Spacing } from '@/constants/theme';
 import { useFontFamily } from '@/hooks/use-font-family';
 import { useTheme } from '@/hooks/use-theme';
 
 export function HomeHistoryPill() {
   const theme = useTheme();
-  const scheme = useColorScheme();
   const insets = useSafeAreaInsets();
   const sans = useFontFamily('sansMedium');
   const [open, setOpen] = useState(false);
@@ -31,16 +29,7 @@ export function HomeHistoryPill() {
         hitSlop={8}
         style={({ pressed }) => [
           styles.pill,
-          {
-            backgroundColor:
-              scheme === 'dark' ? 'rgba(24,24,22,0.72)' : 'rgba(255,255,255,0.64)',
-            borderColor:
-              scheme === 'dark' ? 'rgba(255,255,255,0.09)' : 'rgba(40,38,30,0.07)',
-            boxShadow:
-              scheme === 'dark'
-                ? '0 4px 16px rgba(0, 0, 0, 0.35)'
-                : '0 4px 16px rgba(34, 32, 24, 0.05)',
-          },
+          { backgroundColor: theme.surface, borderColor: theme.border },
           pressed && { opacity: 0.6 },
         ]}>
         <View style={styles.row}>
@@ -75,14 +64,8 @@ export function HomeHistoryPill() {
               styles.card,
               {
                 top: insets.top + 48,
-                backgroundColor:
-                  scheme === 'dark' ? 'rgba(26,26,24,0.96)' : 'rgba(255,255,255,0.94)',
-                borderColor:
-                  scheme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(40,38,30,0.08)',
-                boxShadow:
-                  scheme === 'dark'
-                    ? '0 18px 44px rgba(0, 0, 0, 0.5)'
-                    : '0 18px 44px rgba(40, 37, 27, 0.12)',
+                backgroundColor: theme.surface,
+                borderColor: theme.border,
               },
             ]}
             accessibilityViewIsModal>
@@ -108,7 +91,7 @@ export function HomeHistoryPill() {
 const styles = StyleSheet.create({
   pill: {
     height: 28,
-    borderRadius: 14,
+    borderRadius: Radius.pill,
     borderCurve: 'continuous',
     borderWidth: 1,
     paddingHorizontal: 10,
@@ -127,12 +110,13 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     flex: 1,
+    backgroundColor: Scrim.modal,
   },
   card: {
     position: 'absolute',
     alignSelf: 'center',
     width: 260,
-    borderRadius: 18,
+    borderRadius: Radius.card,
     borderCurve: 'continuous',
     borderWidth: 1,
     padding: Spacing.three,

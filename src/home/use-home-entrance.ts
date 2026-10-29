@@ -28,24 +28,29 @@ export function useHomeEntrance() {
   const reducedMotion = useReducedMotion() ?? false;
   const reduce = useSharedValue(reducedMotion);
   const prompt = useSharedValue(0);
+  const suggestions = useSharedValue(0);
   const composer = useSharedValue(0);
 
   useEffect(() => {
     reduce.set(reducedMotion);
     const timing = { duration: DURATION_MS, easing: EASE_OUT };
     prompt.set(withDelay(40, withTiming(1, timing)));
-    composer.set(withDelay(100, withTiming(1, timing)));
+    suggestions.set(withDelay(100, withTiming(1, timing)));
+    composer.set(withDelay(160, withTiming(1, timing)));
 
     return () => {
       cancelAnimation(prompt);
+      cancelAnimation(suggestions);
       cancelAnimation(composer);
       prompt.set(0);
+      suggestions.set(0);
       composer.set(0);
     };
-  }, [composer, prompt, reduce, reducedMotion]);
+  }, [composer, prompt, reduce, reducedMotion, suggestions]);
 
   return {
     prompt: useFadeUp(prompt, reduce),
+    suggestions: useFadeUp(suggestions, reduce),
     composer: useFadeUp(composer, reduce),
   };
 }
