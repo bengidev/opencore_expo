@@ -1,31 +1,36 @@
+import { NothingStatus, NothingTokens } from '@/constants/palette';
+
+/**
+ * Semantic colour map. Every value comes from `@/constants/palette`, so this is
+ * the only vocabulary components need: `background` is the page, `surface` is a
+ * card, `text*` ranks the ink, and the status tokens are shared across modes.
+ */
 export const Colors = {
   light: {
-    background: '#F5F5F5',
-    backgroundHero: '#F2F1EC',
-    surface: '#FFFFFF',
-    surfaceRaised: '#F0F0F0',
-    border: '#E8E8E8',
-    borderVisible: '#CCCCCC',
-    textDisabled: '#999999',
-    textSecondary: '#666666',
-    text: '#1A1A1A',
-    textDisplay: '#000000',
-    accent: '#D71921',
-    interactive: '#007AFF',
+    background: NothingTokens.light.canvas,
+    surface: NothingTokens.light.surface,
+    surfaceRaised: NothingTokens.light.surfaceRaised,
+    border: NothingTokens.light.border,
+    borderVisible: NothingTokens.light.borderVisible,
+    textDisabled: NothingTokens.light.textDisabled,
+    textSecondary: NothingTokens.light.textSecondary,
+    text: NothingTokens.light.text,
+    textDisplay: NothingTokens.light.textDisplay,
+    interactive: NothingTokens.light.interactive,
+    ...NothingStatus,
   },
   dark: {
-    background: '#000000',
-    backgroundHero: '#0C0C0B',
-    surface: '#111111',
-    surfaceRaised: '#1A1A1A',
-    border: '#222222',
-    borderVisible: '#333333',
-    textDisabled: '#666666',
-    textSecondary: '#999999',
-    text: '#E8E8E8',
-    textDisplay: '#FFFFFF',
-    accent: '#D71921',
-    interactive: '#5B9BF6',
+    background: NothingTokens.dark.canvas,
+    surface: NothingTokens.dark.surface,
+    surfaceRaised: NothingTokens.dark.surfaceRaised,
+    border: NothingTokens.dark.border,
+    borderVisible: NothingTokens.dark.borderVisible,
+    textDisabled: NothingTokens.dark.textDisabled,
+    textSecondary: NothingTokens.dark.textSecondary,
+    text: NothingTokens.dark.text,
+    textDisplay: NothingTokens.dark.textDisplay,
+    interactive: NothingTokens.dark.interactive,
+    ...NothingStatus,
   },
 } as const;
 
@@ -61,12 +66,24 @@ export const Spacing = {
  * reports a ~38.5pt display corner radius (roughly 5.5 mm), and iOS renders
  * those corners as continuous curves rather than circular arcs. Surfaces that
  * use it pair it with `borderCurve: 'continuous'`.
+ *
+ * Everything else follows the Nothing stack: large content sheets at `sheet`,
+ * cards and popovers at `card`, small controls at `compact`, and pills at `pill`.
  */
 export const Radius = {
   surface: 38,
+  sheet: 24,
+  card: 16,
+  compact: 8,
+  technical: 4,
+  pill: 999,
 } as const;
 
-/** CSS box-shadow strings (Expo / New Architecture). */
+/** Dimmed backdrop painted behind modal surfaces. */
+export const Scrim = {
+  modal: 'rgba(0, 0, 0, 0.8)',
+} as const;
+/** Soft lift for the hero speech bubble. UI chrome separates with a border instead. */
 export const BoxShadow = {
   card: '0 2px 10px rgba(0, 0, 0, 0.08)',
   cardDark: '0 4px 14px rgba(0, 0, 0, 0.5)',
@@ -108,17 +125,21 @@ export type AppBorderBeamOptions = {
   brightness?: number;
 };
 
-/** Border beam defaults — boosted for visibility on app surfaces (esp. light cards). */
+/**
+ * Border beam defaults. The beam is the single colour event on a surface, so it
+ * borrows the accent's warm family (`sunset`) instead of the multi-hue rainbow,
+ * and the rotation is kept narrow enough to stay inside that family.
+ */
 export function getAppBorderBeamOptions(scheme: AppColorScheme): AppBorderBeamOptions {
   const onLightSurface = scheme === 'light';
 
   return {
-    colorVariant: 'colorful',
+    colorVariant: 'sunset',
     strength: 1,
     theme: scheme,
-    hueRange: onLightSurface ? 52 : 42,
-    saturation: onLightSurface ? 2.15 : 1.65,
-    brightness: onLightSurface ? 1.6 : 1.4,
+    hueRange: onLightSurface ? 14 : 12,
+    saturation: onLightSurface ? 1.15 : 1.1,
+    brightness: 1,
   };
 }
 
