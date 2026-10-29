@@ -1,4 +1,3 @@
-import { GlassContainer } from 'expo-glass-effect';
 import * as Haptics from 'expo-haptics';
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
@@ -6,10 +5,8 @@ import { useReducedMotion } from 'react-native-reanimated';
 
 import { AppBorderBeam } from '@/components/app-border-beam';
 import { AppIcon } from '@/components/app-icon';
-import { useIosLiquidGlass } from '@/components/liquid-glass-view';
 import { Typography } from '@/constants/typography';
-import { BoxShadow, Radius, Spacing } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Radius, Spacing } from '@/constants/theme';
 import { QUICK_ACTIONS, type ComposerActionItem } from '@/super-chat/composer/composer-actions';
 import { ComposerActionsPopover } from '@/super-chat/composer/composer-actions-popover';
 import { ComposerModelSheet } from '@/super-chat/composer/composer-model-sheet';
@@ -35,13 +32,10 @@ export function SuperChatComposer({
   translucent = false,
 }: SuperChatComposerProps) {
   const theme = useTheme();
-  const colorScheme = useColorScheme();
-  const cardShadow = colorScheme === 'dark' ? BoxShadow.cardDark : BoxShadow.card;
   const reducedMotion = useReducedMotion();
   const sans = useFontFamily('sans');
   const [modelId, setModelId] = useState(DEFAULT_HOME_MODEL_ID);
   const trimmed = draft.trim();
-  const iosGlass = useIosLiquidGlass();
 
   function handleModelSelect(id: string) {
     setModelId(id);
@@ -75,56 +69,36 @@ export function SuperChatComposer({
   }
 
   return (
-    <AppBorderBeam size="md" duration={1.65} active={!reducedMotion} style={styles.beamWrap}>
+    <AppBorderBeam
+      size="md"
+      duration={1.65}
+      active={!reducedMotion}
+      borderRadius={Radius.sheet}
+      style={styles.beamWrap}>
       <View
         style={[
           styles.shell,
           {
             backgroundColor: translucent ? 'transparent' : theme.surface,
             borderColor: translucent ? 'transparent' : theme.border,
-            boxShadow: cardShadow,
           },
         ]}>
-      <TextInput
-        value={draft}
-        onChangeText={onDraftChange}
-        placeholder="How can I help you today?"
-        placeholderTextColor={theme.textDisabled}
-        multiline
-        style={[
-          styles.input,
-          Typography.body,
-          {
-            color: theme.text,
-            fontFamily: sans,
-          },
-        ]}
-        accessibilityLabel="Message"
-      />
-      {iosGlass ? (
-        <GlassContainer spacing={Spacing.two} style={styles.toolbar}>
-          <ComposerModelSheet
-            models={HOME_MODEL_SHEET_ITEMS}
-            selectedId={modelId}
-            variant="glass"
-            onSelect={handleModelSelect}
-          />
-          <View style={styles.toolbarSpacer} />
-          <ComposerActionsPopover items={QUICK_ACTIONS} variant="glass" onSelect={handleActionSelect} />
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Voice input"
-            onPress={() => void Haptics.selectionAsync().catch(() => {})}
-            style={({ pressed }) => [styles.iconTap, pressed && { opacity: 0.6 }]}>
-            <AppIcon ios="mic" android="mic" size={22} color={theme.textDisplay} />
-          </Pressable>
-          <ComposerSendButton
-            enabled={Boolean(trimmed)}
-            metalActive={!reducedMotion}
-            onPress={handleSend}
-          />
-        </GlassContainer>
-      ) : (
+        <TextInput
+          value={draft}
+          onChangeText={onDraftChange}
+          placeholder="How can I help you today?"
+          placeholderTextColor={theme.textDisabled}
+          multiline
+          style={[
+            styles.input,
+            Typography.body,
+            {
+              color: theme.text,
+              fontFamily: sans,
+            },
+          ]}
+          accessibilityLabel="Message"
+        />
         <View style={styles.toolbar}>
           <ComposerModelSheet
             models={HOME_MODEL_SHEET_ITEMS}
@@ -147,7 +121,6 @@ export function SuperChatComposer({
             onPress={handleSend}
           />
         </View>
-      )}
       </View>
     </AppBorderBeam>
   );
@@ -159,7 +132,7 @@ const styles = StyleSheet.create({
   },
   shell: {
     borderWidth: 1,
-    borderRadius: Radius.surface,
+    borderRadius: Radius.sheet,
     borderCurve: 'continuous',
     paddingHorizontal: Spacing.three,
     paddingTop: Spacing.three,

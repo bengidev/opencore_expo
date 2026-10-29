@@ -2,7 +2,7 @@ import { Pressable, StyleSheet } from 'react-native';
 
 import { AppIcon } from '@/components/app-icon';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { ComposerControlVariant } from '@/super-chat/composer/composer-actions-trigger';
 import type { HomeModel } from '@/super-chat/composer/chat-models';
@@ -14,11 +14,7 @@ type ComposerModelTriggerProps = {
 };
 
 /** Fallback trigger for web and platforms without a native chip. */
-export function ComposerModelTrigger({
-  model,
-  variant,
-  onPress,
-}: ComposerModelTriggerProps) {
+export function ComposerModelTrigger({ model, onPress }: ComposerModelTriggerProps) {
   const theme = useTheme();
 
   return (
@@ -31,7 +27,7 @@ export function ComposerModelTrigger({
         styles.chip,
         {
           borderColor: theme.borderVisible,
-          backgroundColor: variant === 'glass' ? theme.surface : theme.surfaceRaised,
+          backgroundColor: theme.surface,
         },
         pressed && { opacity: 0.7 },
       ]}>
@@ -60,7 +56,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     borderWidth: 1,
-    borderRadius: 18,
+    borderRadius: Radius.pill,
     paddingHorizontal: Spacing.two,
     height: 36,
   },

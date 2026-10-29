@@ -1,5 +1,5 @@
 import { Button, HStack, Host, Image, Text } from '@expo/ui/swift-ui';
-import { buttonStyle, font } from '@expo/ui/swift-ui/modifiers';
+import { buttonStyle, font, foregroundStyle } from '@expo/ui/swift-ui/modifiers';
 
 import { useTheme } from '@/hooks/use-theme';
 import type { ComposerControlVariant } from '@/super-chat/composer/composer-actions-trigger';
@@ -31,7 +31,9 @@ export function ComposerModelTrigger({
         modifiers={[buttonStyle(variant === 'glass' ? 'glass' : 'bordered')]}>
         <HStack spacing={4} alignment="center">
           <Image systemName={model.iosSymbol} size={15} color={theme.text} />
-          <Text modifiers={[font({ size: 15, weight: 'medium' })]}>{model.name}</Text>
+          <Text modifiers={[font({ size: 15, weight: 'medium' }), foregroundStyle(theme.text)]}>
+            {model.name}
+          </Text>
           <Image systemName="chevron.down" size={12} color={theme.textSecondary} />
         </HStack>
       </Button>
