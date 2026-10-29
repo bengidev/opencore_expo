@@ -6,13 +6,15 @@ import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedView } from '@/components/themed-view';
-import { Spacing } from '@/constants/theme';
-import { HomeComposer } from '@/home/home-composer';
+import { Radius, Spacing } from '@/constants/theme';
+import { HOME_SPEECH_LINES, type HomeSuggestion } from '@/home/home-content';
 import { HomeHistoryPill } from '@/home/home-history-pill';
 import { HomePrompt } from '@/home/home-greeting';
+import { HOME_COMPOSER_GAP, HOME_EDGE_INSET } from '@/home/home-layout';
+import { SuggestionCarousel } from '@/home/suggestion-carousel';
 import { useHomeEntrance } from '@/home/use-home-entrance';
-import { HOME_SPEECH_LINES } from '@/home/home-content';
 import { SharkGlass, SharkOceanStage } from '@/onboarding/shark-ocean/shark-ocean-stage';
+import { SuperChatComposer } from '@/super-chat/composer/super-chat-composer';
 
 const isStaticWebRender = Platform.OS === 'web' && typeof window === 'undefined';
 
@@ -20,6 +22,10 @@ export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const entrance = useHomeEntrance();
   const [draft, setDraft] = useState('');
+
+  function handleSuggestionSelect(suggestion: HomeSuggestion) {
+    setDraft(suggestion.title);
+  }
 
   function handleSubmit(message: string) {
     const trimmed = message.trim();
@@ -29,7 +35,7 @@ export function HomeScreen() {
   }
 
   const content = (
-    <ThemedView type="backgroundHero" style={styles.screen}>
+    <ThemedView type="background" style={styles.screen}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -48,13 +54,18 @@ export function HomeScreen() {
               <HomeHistoryPill />
             </View>
             <View style={styles.center} pointerEvents="box-none">
-              <SharkGlass glass={false} radius={24} style={styles.promptZone}>
+              <SharkGlass radius={Radius.sheet} style={styles.promptZone}>
                 <Animated.View style={entrance.prompt}>
                   <HomePrompt />
                 </Animated.View>
               </SharkGlass>
-              <Animated.View style={[styles.composer, entrance.composer]}>
-                <HomeComposer
+            </View>
+            <View style={styles.bottom}>
+              <Animated.View style={entrance.suggestions}>
+                <SuggestionCarousel onSelect={handleSuggestionSelect} />
+              </Animated.View>
+              <Animated.View style={entrance.composer}>
+                <SuperChatComposer
                   draft={draft}
                   onDraftChange={setDraft}
                   onSubmit={handleSubmit}
@@ -84,7 +95,7 @@ const styles = StyleSheet.create({
   },
   column: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
+    paddingHorizontal: HOME_EDGE_INSET,
   },
   topBar: {
     minHeight: 32,
@@ -95,15 +106,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: 108,
   },
   promptZone: {
     paddingHorizontal: Spacing.four,
     paddingVertical: Spacing.three,
   },
-  composer: {
-    width: '100%',
-    alignItems: 'center',
+  bottom: {
+    gap: HOME_COMPOSER_GAP,
+    paddingTop: Spacing.three,
   },
 });
