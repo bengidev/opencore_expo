@@ -83,7 +83,7 @@ export function ComposerActionsTrigger({ variant, onPress }: ComposerActionsTrig
       onPress={onPress}
       style={({ pressed }) => [
         composerTriggerStyles.circleButton,
-        { borderColor: theme.borderVisible, backgroundColor: theme.surfaceRaised },
+        { borderColor: theme.borderVisible, backgroundColor: theme.surface },
         pressed && { opacity: 0.7 },
       ]}>
       <AppIcon ios="plus" android="add" size={20} color={theme.textDisplay} />

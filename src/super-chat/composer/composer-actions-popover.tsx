@@ -10,7 +10,7 @@ import {
 
 import { AppIcon } from '@/components/app-icon';
 import { ThemedText } from '@/components/themed-text';
-import { Spacing } from '@/constants/theme';
+import { Radius, Scrim, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import {
   filterComposerActions,
@@ -104,7 +104,7 @@ export function ComposerActionsPopover({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.25)',
+    backgroundColor: Scrim.modal,
     alignItems: 'center',
     justifyContent: 'center',
     padding: Spacing.three,
@@ -112,14 +112,14 @@ const styles = StyleSheet.create({
   card: {
     width: '100%',
     maxWidth: 360,
-    borderRadius: 20,
+    borderRadius: Radius.card,
     borderWidth: 1,
     padding: Spacing.three,
     gap: Spacing.two,
   },
   input: {
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: Radius.compact,
     paddingHorizontal: Spacing.two,
     paddingVertical: Spacing.one,
   },
