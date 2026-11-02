@@ -23,7 +23,7 @@ import {
 
 type ComposerActionsPopoverProps = {
   items: readonly ComposerActionItem[];
-  variant: ComposerControlVariant;
+  variant?: ComposerControlVariant;
   onSelect: (item: ComposerActionItem) => void;
 };
 

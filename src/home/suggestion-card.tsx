@@ -3,10 +3,10 @@ import { useState } from 'react';
 import { Pressable, StyleSheet } from 'react-native';
 import Animated, { cubicBezier, useReducedMotion } from 'react-native-reanimated';
 
+import { NativeSurface } from '@/components/native-surface';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import type { HomeSuggestion } from '@/home/home-content';
-import { useTheme } from '@/hooks/use-theme';
 
 const PRESS_EASE = cubicBezier(0.23, 1, 0.32, 1);
 
@@ -16,7 +16,6 @@ type SuggestionCardProps = {
 };
 
 export function SuggestionCard({ suggestion, onPress }: SuggestionCardProps) {
-  const theme = useTheme();
   const reducedMotion = useReducedMotion();
   const [pressed, setPressed] = useState(false);
 
@@ -33,11 +32,6 @@ export function SuggestionCard({ suggestion, onPress }: SuggestionCardProps) {
       style={styles.pressable}>
       <Animated.View
         style={[
-          styles.card,
-          {
-            backgroundColor: theme.surface,
-            borderColor: theme.border,
-          },
           reducedMotion
             ? {
                 transitionProperty: 'opacity',
@@ -52,14 +46,23 @@ export function SuggestionCard({ suggestion, onPress }: SuggestionCardProps) {
                 transform: [{ scale: pressed ? 0.97 : 1 }],
               },
         ]}>
-        <ThemedText variant="bodySm" face="sansBold" themeColor="text" numberOfLines={3}>
-          {suggestion.title}
-        </ThemedText>
-        {suggestion.subtitle ? (
-          <ThemedText variant="caption" themeColor="textSecondary" numberOfLines={2} style={styles.subtitle}>
-            {suggestion.subtitle}
+        {/* Floating over the ocean means a real glass material where the system
+            has one, a filled Material container on Android, and the app's own
+            surface — stroke included — only where neither exists. */}
+        <NativeSurface tone="glass" radius={Radius.card} style={styles.card}>
+          <ThemedText variant="bodySm" face="sansBold" themeColor="text" numberOfLines={3}>
+            {suggestion.title}
           </ThemedText>
-        ) : null}
+          {suggestion.subtitle ? (
+            <ThemedText
+              variant="caption"
+              themeColor="textSecondary"
+              numberOfLines={2}
+              style={styles.subtitle}>
+              {suggestion.subtitle}
+            </ThemedText>
+          ) : null}
+        </NativeSurface>
       </Animated.View>
     </Pressable>
   );
@@ -71,9 +74,6 @@ const styles = StyleSheet.create({
   },
   card: {
     minHeight: 88,
-    borderWidth: 1,
-    borderRadius: Radius.card,
-    borderCurve: 'continuous',
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.three,
     justifyContent: 'center',

@@ -77,6 +77,8 @@ export const Radius = {
   compact: 8,
   technical: 4,
   pill: 999,
+  /** Material 3's extra-large container, for tier-native Android surfaces. */
+  materialSheet: 28,
 } as const;
 
 /** Dimmed backdrop painted behind modal surfaces. */

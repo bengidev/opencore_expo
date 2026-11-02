@@ -3,6 +3,7 @@ import * as Haptics from 'expo-haptics';
 import { useCallback, useRef, useState } from 'react';
 
 import { useTheme } from '@/hooks/use-theme';
+import { hasNativeChrome } from '@/lib/ui-tier';
 import type { ComposerControlVariant } from '@/super-chat/composer/composer-actions-trigger';
 import { ComposerModelTrigger } from '@/super-chat/composer/composer-model-trigger';
 import type { HomeModel, ThinkingLevel } from '@/super-chat/composer/chat-models';
@@ -15,7 +16,7 @@ import {
 type ComposerModelSheetProps = {
   models: readonly HomeModel[];
   selectedId: string;
-  variant: ComposerControlVariant;
+  variant?: ComposerControlVariant;
   onSelect: (id: string) => void;
 };
 
@@ -89,10 +90,11 @@ export function ComposerModelSheet({
         index={-1}
         snapPoints={[...MODEL_SHEET_SNAP_POINTS]}
         enablePanDownToClose
-        // The sheet uses the app surface on every platform. The native iOS
-        // sheet material is lighter than the app's dark surface, which would
-        // invert the "raised" tier and make selected rows read as dark holes.
-        backgroundStyle={{ backgroundColor: theme.surface }}
+        // The native tiers keep the sheet's own material: the iOS 26 sheet is
+        // translucent glass and the Material sheet is a tonal container. Only
+        // the custom tier paints the app surface, because it has no material
+        // of its own.
+        backgroundStyle={hasNativeChrome ? undefined : { backgroundColor: theme.surface }}
         onChange={handleSnapChange}
         onClose={() => {
           setQuery('');

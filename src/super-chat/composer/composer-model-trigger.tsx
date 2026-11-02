@@ -9,7 +9,7 @@ import type { HomeModel } from '@/super-chat/composer/chat-models';
 
 type ComposerModelTriggerProps = {
   model: HomeModel;
-  variant: ComposerControlVariant;
+  variant?: ComposerControlVariant;
   onPress: () => void;
 };
 

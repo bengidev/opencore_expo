@@ -15,9 +15,10 @@ import {
   menuStyle,
   shapes,
 } from '@expo/ui/swift-ui/modifiers';
-import { Platform, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { useTheme } from '@/hooks/use-theme';
+import { isIosGlass } from '@/lib/ui-tier';
 import {
   THINKING_LEVEL_LABELS,
   type ThinkingLevel,
@@ -34,14 +35,11 @@ type ThinkingLevelControlProps = {
   onSelect: (level: ThinkingLevel) => void;
 };
 
-const IOS_MAJOR_VERSION = Number.parseInt(String(Platform.Version), 10);
-const GLASS_AVAILABLE = IOS_MAJOR_VERSION >= 26;
-
 /**
  * Native iOS thinking-level menu. The trigger is a custom SwiftUI label so it
- * matches the row's other controls; on iOS 26 and later that label is a real
- * Liquid Glass capsule, on older systems it is a bordered capsule. The menu
- * itself is the system menu, with a checkmark for the current level.
+ * matches the row's other controls; where the system has Liquid Glass that
+ * label is a real glass capsule, and where it does not it is a bordered one.
+ * The menu itself is the system menu, with a checkmark for the current level.
  */
 export function ThinkingLevelControl({
   modelId,
@@ -53,7 +51,7 @@ export function ThinkingLevelControl({
 
   const labelModifiers = [
     frame({ width: THINKING_TRIGGER_WIDTH, height: THINKING_TRIGGER_HEIGHT }),
-    ...(GLASS_AVAILABLE
+    ...(isIosGlass
       ? [
           glassEffect({
             glass: { variant: 'regular', interactive: true },
