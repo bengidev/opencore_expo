@@ -1,14 +1,8 @@
 import { type ImageSourcePropType } from 'react-native';
 
-import { Host, Icon, Row, Text } from '@expo/ui/jetpack-compose';
-import {
-  background,
-  border,
-  clickable,
-  cornerRadius,
-  padding,
-} from '@expo/ui/jetpack-compose/modifiers';
+import { FilledTonalButton, Host, Icon, Row, Text, TextButton } from '@expo/ui/jetpack-compose';
 
+import { useMaterialTheme } from '@/hooks/use-material-theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { ComposerControlVariant } from '@/super-chat/composer/composer-actions-trigger';
 import type { HomeModel, HomeModelAndroidIcon } from '@/super-chat/composer/chat-models';
@@ -27,38 +21,56 @@ const MODEL_ICONS: Record<HomeModelAndroidIcon, ImageSourcePropType> = {
 
 type ComposerModelTriggerProps = {
   model: HomeModel;
-  variant: ComposerControlVariant;
+  variant?: ComposerControlVariant;
   onPress: () => void;
 };
 
 /**
- * Native Android trigger: a clickable Material row that opens the model sheet.
- * The selected model is shown with its Material Symbol.
+ * Native Android trigger: a Material 3 tonal button with the selected model's
+ * Material Symbol. The container, the shape, the ripple and the content colour
+ * all come from the button, so it matches every other Material control.
  */
-export function ComposerModelTrigger({
-  model,
-  variant,
-  onPress,
-}: ComposerModelTriggerProps) {
+export function ComposerModelTrigger({ model, variant, onPress }: ComposerModelTriggerProps) {
   const theme = useTheme();
+  const material = useMaterialTheme();
+
+  if (variant === 'plain') {
+    return (
+      <Host
+        matchContents
+        colorScheme={material.colorScheme}
+        colorOverrides={material.colorOverrides}>
+        <TextButton
+          onClick={onPress}
+          colors={{ contentColor: theme.text }}
+          contentPadding={{ start: 10, top: 4, end: 10, bottom: 4 }}>
+          <Row horizontalArrangement={{ spacedBy: 6 }} verticalAlignment="center">
+            <Icon source={MODEL_ICONS[model.androidIcon]} size={16} tint={theme.text} />
+            <Text color={theme.text} style={{ fontSize: 14, fontWeight: '500' }}>
+              {model.name}
+            </Text>
+          </Row>
+        </TextButton>
+      </Host>
+    );
+  }
 
   return (
-    <Host matchContents>
-      <Row
-        horizontalArrangement={{ spacedBy: 6 }}
-        verticalAlignment="center"
-        modifiers={[
-          clickable(onPress),
-          padding(12, 8, 12, 8),
-          cornerRadius(18),
-          background(variant === 'glass' ? theme.surface : theme.surfaceRaised),
-          border(1, theme.borderVisible),
-        ]}>
-        <Icon source={MODEL_ICONS[model.androidIcon]} size={16} tint={theme.text} />
-        <Text color={theme.text} style={{ fontSize: 15, fontWeight: '500' }}>
-          {model.name}
-        </Text>
-      </Row>
+    <Host
+      matchContents
+      colorScheme={material.colorScheme}
+      colorOverrides={material.colorOverrides}>
+      <FilledTonalButton
+        onClick={onPress}
+        colors={{ containerColor: theme.surfaceRaised, contentColor: theme.text }}
+        contentPadding={{ start: 14, top: 4, end: 14, bottom: 4 }}>
+        <Row horizontalArrangement={{ spacedBy: 6 }} verticalAlignment="center">
+          <Icon source={MODEL_ICONS[model.androidIcon]} size={16} tint={theme.text} />
+          <Text color={theme.text} style={{ fontSize: 14, fontWeight: '500' }}>
+            {model.name}
+          </Text>
+        </Row>
+      </FilledTonalButton>
     </Host>
   );
 }

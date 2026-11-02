@@ -21,6 +21,11 @@ type ThinkingLevelControlProps = {
 /**
  * Native Android thinking-level menu: a Material dropdown anchored to the
  * trigger pill, with a trailing checkmark on the current level.
+ *
+ * The popup is the platform's own `PopupMenu`, themed by the Android activity
+ * theme rather than by the Compose scheme, so it sits outside the palette
+ * overrides in `@/lib/material-colors` — unlike the Compose surfaces, which are
+ * mapped onto it.
  */
 export function ThinkingLevelControl({
   modelId,
