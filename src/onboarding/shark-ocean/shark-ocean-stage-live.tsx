@@ -37,6 +37,7 @@ const MAX_CATCHUP_STEPS = 8;
 export function SharkOceanStageLive({
   speechLines,
   showSpeech = true,
+  onBackdropPress,
   children,
 }: SharkOceanStageProps) {
   const insets = useSafeAreaInsets();
@@ -291,9 +292,10 @@ export function SharkOceanStageLive({
         </Canvas>
         <Pressable
           style={StyleSheet.absoluteFill}
-          onPress={(event) =>
-            handleSplash(event.nativeEvent.locationX, event.nativeEvent.locationY)
-          }
+          onPress={(event) => {
+            onBackdropPress?.();
+            handleSplash(event.nativeEvent.locationX, event.nativeEvent.locationY);
+          }}
           accessibilityLabel="Ocean"
         />
         <View style={styles.content} pointerEvents="box-none">
