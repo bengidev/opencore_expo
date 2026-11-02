@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
 import { PanelUIProvider } from 'panelui-native/provider';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { KeyboardDismissSurface, dismissKeyboard } from '@/components/keyboard-dismiss-surface';
 import { ThemedView } from '@/components/themed-view';
 import { Radius, Spacing } from '@/constants/theme';
 import { HOME_SPEECH_LINES, type HomeSuggestion } from '@/home/home-content';
@@ -13,6 +14,7 @@ import { HomePrompt } from '@/home/home-greeting';
 import { HOME_COMPOSER_GAP, HOME_EDGE_INSET } from '@/home/home-layout';
 import { SuggestionCarousel } from '@/home/suggestion-carousel';
 import { useHomeEntrance } from '@/home/use-home-entrance';
+import { useKeyboardBottomPadding } from '@/hooks/use-keyboard-bottom-padding';
 import { SharkGlass, SharkOceanStage } from '@/onboarding/shark-ocean/shark-ocean-stage';
 import { SuperChatComposer } from '@/super-chat/composer/super-chat-composer';
 
@@ -21,6 +23,10 @@ const isStaticWebRender = Platform.OS === 'web' && typeof window === 'undefined'
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const entrance = useHomeEntrance();
+  const keyboardPadding = useKeyboardBottomPadding(
+    Math.max(insets.bottom, Spacing.three),
+    Spacing.three,
+  );
   const [draft, setDraft] = useState('');
 
   function handleSuggestionSelect(suggestion: HomeSuggestion) {
@@ -36,18 +42,16 @@ export function HomeScreen() {
 
   const content = (
     <ThemedView type="background" style={styles.screen}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? insets.top : 0}>
-        <SharkOceanStage speechLines={HOME_SPEECH_LINES} showSpeech={false}>
-          <View
+      <KeyboardDismissSurface>
+        <SharkOceanStage
+          speechLines={HOME_SPEECH_LINES}
+          showSpeech={false}
+          onBackdropPress={dismissKeyboard}>
+          <Animated.View
             style={[
               styles.column,
-              {
-                paddingTop: insets.top + Spacing.two,
-                paddingBottom: Math.max(insets.bottom, Spacing.three),
-              },
+              { paddingTop: insets.top + Spacing.two },
+              keyboardPadding,
             ]}
             pointerEvents="box-none">
             <View style={styles.topBar} pointerEvents="box-none">
@@ -73,9 +77,9 @@ export function HomeScreen() {
                 />
               </Animated.View>
             </View>
-          </View>
+          </Animated.View>
         </SharkOceanStage>
-      </KeyboardAvoidingView>
+      </KeyboardDismissSurface>
     </ThemedView>
   );
 
@@ -88,9 +92,6 @@ export function HomeScreen() {
 
 const styles = StyleSheet.create({
   screen: {
-    flex: 1,
-  },
-  flex: {
     flex: 1,
   },
   column: {
