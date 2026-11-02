@@ -9,6 +9,7 @@ import { KeyboardDismissSurface, dismissKeyboard } from '@/components/keyboard-d
 import { ThemedView } from '@/components/themed-view';
 import { Radius, Spacing } from '@/constants/theme';
 import { HOME_SPEECH_LINES, type HomeSuggestion } from '@/home/home-content';
+import { HomeHistoryPanel } from '@/home/home-history-panel';
 import { HomeHistoryPill } from '@/home/home-history-pill';
 import { HomePrompt } from '@/home/home-greeting';
 import { HOME_COMPOSER_GAP, HOME_EDGE_INSET } from '@/home/home-layout';
@@ -28,6 +29,7 @@ export function HomeScreen() {
     Spacing.three,
   );
   const [draft, setDraft] = useState('');
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   function handleSuggestionSelect(suggestion: HomeSuggestion) {
     setDraft(suggestion.title);
@@ -55,7 +57,7 @@ export function HomeScreen() {
             ]}
             pointerEvents="box-none">
             <View style={styles.topBar} pointerEvents="box-none">
-              <HomeHistoryPill />
+              <HomeHistoryPill onOpen={() => setHistoryOpen(true)} />
             </View>
             <View style={styles.center} pointerEvents="box-none">
               <SharkGlass radius={Radius.sheet} style={styles.promptZone}>
@@ -78,6 +80,7 @@ export function HomeScreen() {
               </Animated.View>
             </View>
           </Animated.View>
+          {historyOpen ? <HomeHistoryPanel onClose={() => setHistoryOpen(false)} /> : null}
         </SharkOceanStage>
       </KeyboardDismissSurface>
     </ThemedView>
