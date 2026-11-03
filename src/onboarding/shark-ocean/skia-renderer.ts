@@ -1061,14 +1061,17 @@ export class SkiaOceanRenderer {
         glyph = SKIN_RAMP[clamp(Math.floor((1 - shade) * 8.99) + jitter, 0, SKIN_RAMP.length - 1)];
       }
       level *= dim;
-      const grey = Math.max(0, Math.min(255, Math.round(level)));
-      this.fillPaint.setColor(this.color(grey, grey, grey));
+      if (flag === FLAG_EYE) {
+        // Eyes carry the accent so the hero reads as a living thing, not a
+        // grey silhouette.
+        this.fillPaint.setColor(Skia.Color(NothingStatus.accent));
+      } else {
+        const grey = Math.max(0, Math.min(255, Math.round(level)));
+        this.fillPaint.setColor(this.color(grey, grey, grey));
+      }
       canvas.drawRect({ x: x + 1, y: y + 1, width: cw - 1, height: ch - 1 }, this.fillPaint);
 
-      if (flag === FLAG_EYE)
-        this.textPaint.setColor(
-          Skia.Color(this.light ? NothingTokens.light.surface : NothingTokens.dark.textDisabled),
-        );
+      if (flag === FLAG_EYE) this.textPaint.setColor(Skia.Color(NothingTokens.light.surface));
       else if (flag === FLAG_MARK)
         this.textPaint.setColor(
           Skia.Color(this.light ? NothingTokens.light.surface : NothingTokens.dark.borderVisible),

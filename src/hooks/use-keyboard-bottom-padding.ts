@@ -1,4 +1,5 @@
-import { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
+import { useEffect } from 'react';
+import { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useGenericKeyboardHandler } from 'react-native-keyboard-controller';
 
 /**
@@ -20,8 +21,14 @@ import { useGenericKeyboardHandler } from 'react-native-keyboard-controller';
  * keyboard listener; see `use-keyboard-bottom-padding.android.ts` for why the
  * controller's insets callback cannot be trusted there.
  */
-export function useKeyboardBottomPadding(restingPadding: number, openPadding: number) {
+export function useKeyboardBottomPadding(
+  restingPadding: number,
+  openPadding: number,
+  // Only the Android tab router needs this; see the sibling file.
+  reservedBottom = 0,
+) {
   const padding = useSharedValue(restingPadding);
+  const keyboardProgress = useSharedValue(0);
 
   // Handlers only, no resize mode: this file is what iOS and web get, and
   // neither needs the global soft-input mode touched from a screen.
@@ -33,6 +40,7 @@ export function useKeyboardBottomPadding(restingPadding: number, openPadding: nu
         const progress = Math.min(Math.max(event.progress, 0), 1);
         const base = restingPadding + (openPadding - restingPadding) * progress;
 
+        keyboardProgress.value = progress;
         // iOS reports negative heights while the keyboard is dismissing.
         padding.value = Math.max(event.height, 0) + base;
       },
@@ -42,11 +50,21 @@ export function useKeyboardBottomPadding(restingPadding: number, openPadding: nu
         const progress = Math.min(Math.max(event.progress, 0), 1);
         const base = restingPadding + (openPadding - restingPadding) * progress;
 
+        keyboardProgress.value = progress;
         padding.value = Math.max(event.height, 0) + base;
       },
     },
     [restingPadding, openPadding],
   );
+
+  // A tab bar can widen the bottom inset after the first layout pass. Follow
+  // that change while the keyboard is closed instead of keeping the padding
+  // the screen mounted with until the next keyboard event.
+  useEffect(() => {
+    if (keyboardProgress.value === 0) {
+      padding.value = withTiming(restingPadding, { duration: 180 });
+    }
+  }, [keyboardProgress, padding, restingPadding]);
 
   return useAnimatedStyle(() => ({ paddingBottom: padding.value }));
 }

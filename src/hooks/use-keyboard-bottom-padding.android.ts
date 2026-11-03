@@ -21,15 +21,24 @@ import { useAnimatedKeyboard, useAnimatedStyle } from 'react-native-reanimated';
  * safe-area inset). `openPadding` replaces it as soon as the keyboard starts
  * rising, so the composer keeps a small gap above the keyboard instead of the
  * home-indicator inset.
+ *
+ * `reservedBottom` is the part of the window the view does not cover — inside
+ * a native tab screen the tab bar sits there, underneath the RN root. The
+ * keyboard height is measured from the window edge, so without subtracting it
+ * the composer would float a tab bar's height above the keyboard.
  */
-export function useKeyboardBottomPadding(restingPadding: number, openPadding: number) {
+export function useKeyboardBottomPadding(
+  restingPadding: number,
+  openPadding: number,
+  reservedBottom = 0,
+) {
   const { height } = useAnimatedKeyboard({
     isStatusBarTranslucentAndroid: true,
     isNavigationBarTranslucentAndroid: true,
   });
 
   return useAnimatedStyle(() => {
-    const keyboard = Math.max(height.value, 0);
+    const keyboard = Math.max(height.value - reservedBottom, 0);
     const base = keyboard > 0 ? openPadding : restingPadding;
 
     return { paddingBottom: keyboard + base };
