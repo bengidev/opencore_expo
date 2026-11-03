@@ -1,16 +1,14 @@
 import { router } from 'expo-router';
 import { PanelUIProvider } from 'panelui-native/provider';
 import { useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Dimensions, Platform, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { KeyboardDismissSurface, dismissKeyboard } from '@/components/keyboard-dismiss-surface';
 import { ThemedView } from '@/components/themed-view';
 import { Radius, Spacing } from '@/constants/theme';
 import { HOME_SPEECH_LINES, type HomeSuggestion } from '@/home/home-content';
-import { HomeHistoryPanel } from '@/home/home-history-panel';
-import { HomeHistoryPill } from '@/home/home-history-pill';
 import { HomePrompt } from '@/home/home-greeting';
 import { HOME_COMPOSER_GAP, HOME_EDGE_INSET } from '@/home/home-layout';
 import { SuggestionCarousel } from '@/home/suggestion-carousel';
@@ -21,15 +19,49 @@ import { SuperChatComposer } from '@/super-chat/composer/super-chat-composer';
 
 const isStaticWebRender = Platform.OS === 'web' && typeof window === 'undefined';
 
+/**
+ * The tab screen's bottom safe-area inset already includes the floating tab
+ * bar, so the composer only needs a small gap above it. Android's tab router
+ * pads the content itself, so there the gap is the base padding.
+ */
+const IOS_TAB_BAR_GAP = Spacing.two;
+
 export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const entrance = useHomeEntrance();
+  const restingPadding =
+    Platform.OS === 'ios'
+      ? Math.max(insets.bottom, Spacing.three) + IOS_TAB_BAR_GAP
+      : Spacing.three;
+  const [reservedBottom, setReservedBottom] = useState(0);
   const keyboardPadding = useKeyboardBottomPadding(
-    Math.max(insets.bottom, Spacing.three),
+    restingPadding,
     Spacing.three,
+    reservedBottom,
   );
   const [draft, setDraft] = useState('');
-  const [historyOpen, setHistoryOpen] = useState(false);
+  
+
+  /**
+   * The Android tab router lays the screen out between the status bar and the
+   * native tab bar, so the content ends one tab bar above the window edge. The
+   * keyboard height is measured from that edge; this offset keeps the composer
+   * a constant gap above the keyboard instead of floating by the bar's height.
+   *
+   * `onLayout` reports the column's height inside the router's native wrapper;
+   * the tab bar inset is owned by that wrapper and never reaches JS, so this
+   * frame is the only place the real content edge is visible.
+   */
+  function measureReservedBottom(event: LayoutChangeEvent) {
+    if (Platform.OS !== 'android') return;
+
+    const topInset = initialWindowMetrics?.insets.top ?? 0;
+    const screenHeight = Dimensions.get('screen').height;
+
+    setReservedBottom(
+      Math.max(0, Math.round(screenHeight - topInset - event.nativeEvent.layout.height)),
+    );
+  }
 
   function handleSuggestionSelect(suggestion: HomeSuggestion) {
     setDraft(suggestion.title);
@@ -55,10 +87,8 @@ export function HomeScreen() {
               { paddingTop: insets.top + Spacing.two },
               keyboardPadding,
             ]}
-            pointerEvents="box-none">
-            <View style={styles.topBar} pointerEvents="box-none">
-              <HomeHistoryPill onOpen={() => setHistoryOpen(true)} />
-            </View>
+            pointerEvents="box-none"
+            onLayout={measureReservedBottom}>
             <View style={styles.center} pointerEvents="box-none">
               <SharkGlass radius={Radius.sheet} style={styles.promptZone}>
                 <Animated.View style={entrance.prompt}>
@@ -80,7 +110,6 @@ export function HomeScreen() {
               </Animated.View>
             </View>
           </Animated.View>
-          {historyOpen ? <HomeHistoryPanel onClose={() => setHistoryOpen(false)} /> : null}
         </SharkOceanStage>
       </KeyboardDismissSurface>
     </ThemedView>
@@ -100,11 +129,6 @@ const styles = StyleSheet.create({
   column: {
     flex: 1,
     paddingHorizontal: HOME_EDGE_INSET,
-  },
-  topBar: {
-    minHeight: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   center: {
     flex: 1,
