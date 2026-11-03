@@ -12,7 +12,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { Colors } from '@/constants/theme';
 import { useAppFonts } from '@/hooks/use-app-fonts';
-import { hasNativeChrome } from '@/lib/ui-tier';
+import { hasNativeChrome, isAndroidMaterial } from '@/lib/ui-tier';
 
 SplashScreen.preventAutoHideAsync().catch(() => {
   // Fast refresh can call this after the splash is already gone.
@@ -41,17 +41,29 @@ export default function RootLayout() {
         <Stack>
           <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="home" options={{ headerShown: false, title: 'Home' }} />
-          <Stack.Screen name="super-chat" options={{ title: 'OpenCore', headerBackTitle: 'Home' }}>
-            <Stack.Header
-              style={{
-                color: colors.text,
-                shadowColor: 'transparent',
-                // The native tiers draw their own bar material — the iOS 26 glass
-                // bar and the Material app bar — so the app only paints a
-                // background where no native bar exists.
-                ...(hasNativeChrome ? null : { backgroundColor: colors.background }),
-              }}
-            />
+          <Stack.Screen
+            name="super-chat"
+            options={{
+              title: 'OpenCore',
+              headerBackTitle: 'Home',
+              // Android draws its own Material 3 app bar in Compose — the native
+              // header reserves the status-bar inset twice on some devices, leaving
+              // the title in the middle of a tall white slab
+              // (react-native-screens#4737).
+              headerShown: !isAndroidMaterial,
+            }}>
+            {isAndroidMaterial ? null : (
+              <Stack.Header
+                style={{
+                  color: colors.text,
+                  shadowColor: 'transparent',
+                  // The native tiers draw their own bar material — the iOS 26 glass
+                  // bar and Android's Compose app bar (`AndroidAppBar`) — so the app
+                  // only paints a background where no native bar exists.
+                  ...(hasNativeChrome ? null : { backgroundColor: colors.background }),
+                }}
+              />
+            )}
           </Stack.Screen>
         </Stack>
       </KeyboardProvider>
