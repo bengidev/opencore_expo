@@ -40,12 +40,14 @@ export default function RootLayout() {
       <KeyboardProvider>
         <Stack>
           <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="home" options={{ headerShown: false, title: 'Home' }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen
             name="super-chat"
             options={{
               title: 'OpenCore',
-              headerBackTitle: 'Home',
+              // Chats are opened from Home and from the Chats tab, so the back
+              // label cannot name one tab.
+              headerBackTitle: 'Back',
               // Android draws its own Material 3 app bar in Compose — the native
               // header reserves the status-bar inset twice on some devices, leaving
               // the title in the middle of a tall white slab
