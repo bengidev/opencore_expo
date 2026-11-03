@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AndroidAppBar } from '@/components/android-app-bar';
 import { KeyboardDismissSurface } from '@/components/keyboard-dismiss-surface';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
@@ -43,6 +44,7 @@ export function SuperChatScreen() {
 
   return (
     <ThemedView style={styles.screen}>
+      <AndroidAppBar title="OpenCore" />
       <KeyboardDismissSurface>
         <Animated.View style={[styles.column, keyboardPadding]}>
           <MessageList messages={messages} />
