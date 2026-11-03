@@ -1,37 +1,48 @@
 import * as Haptics from 'expo-haptics';
-import { useState } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppIcon } from '@/components/app-icon';
-import { ThemedText } from '@/components/themed-text';
-import { Radius, Scrim, Spacing } from '@/constants/theme';
+import { dismissKeyboard } from '@/components/keyboard-dismiss-surface';
+import { NativeSurface } from '@/components/native-surface';
+import { Radius, Spacing } from '@/constants/theme';
 import { useFontFamily } from '@/hooks/use-font-family';
 import { useTheme } from '@/hooks/use-theme';
 
-export function HomeHistoryPill() {
+/**
+ * The history trigger.
+ *
+ * It is a plain pressable rather than a system menu (`Menu`, `DropdownMenu`,
+ * a `UIMenu`): on iOS 26 and later a system menu puts its own hidden text field
+ * into focus for type-ahead filtering, and every platform re-shows the keyboard
+ * for whichever editor still holds focus when a popup window takes and returns
+ * focus. Either way a native menu summons the keyboard on a screen whose
+ * composer has nothing to type into, and neither can be dismissed from
+ * JavaScript because no TextInput owns that keyboard. The panel it opens is
+ * drawn by the app (see `home-history-panel.tsx`). The chip itself is still the
+ * platform's own surface through `NativeSurface`: Liquid Glass on iOS 26, the
+ * Material container on Android, a bordered capsule elsewhere.
+ */
+export function HomeHistoryPill({ onOpen }: { onOpen: () => void }) {
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
   const sans = useFontFamily('sansMedium');
-  const [open, setOpen] = useState(false);
 
   function handlePress() {
+    // Blur before the panel opens: a panel presented over a focused editor is
+    // what makes the keyboard come back on a tap that never asked for it.
+    dismissKeyboard();
     void Haptics.selectionAsync().catch(() => {});
-    setOpen(true);
+    onOpen();
   }
 
   return (
-    <>
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="History"
-        onPress={handlePress}
-        hitSlop={8}
-        style={({ pressed }) => [
-          styles.pill,
-          { backgroundColor: theme.surface, borderColor: theme.border },
-          pressed && { opacity: 0.6 },
-        ]}>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="History"
+      accessibilityHint="Opens recent conversations"
+      onPress={handlePress}
+      hitSlop={8}
+      style={({ pressed }) => (pressed ? styles.pressed : null)}>
+      <NativeSurface tone="glass" radius={Radius.pill} interactive style={styles.pill}>
         <View style={styles.row}>
           <AppIcon ios="clock" android="history" size={12} color={theme.textSecondary} />
           <Text
@@ -49,54 +60,20 @@ export function HomeHistoryPill() {
             color={theme.textSecondary}
           />
         </View>
-      </Pressable>
-      <Modal
-        visible={open}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setOpen(false)}>
-        <Pressable
-          style={styles.backdrop}
-          onPress={() => setOpen(false)}
-          accessibilityLabel="Close history">
-          <View
-            style={[
-              styles.card,
-              {
-                top: insets.top + 48,
-                backgroundColor: theme.surface,
-                borderColor: theme.border,
-              },
-            ]}
-            accessibilityViewIsModal>
-            <View style={styles.cardHead}>
-              <AppIcon ios="clock" android="history" size={13} color={theme.textSecondary} />
-              <ThemedText variant="caption" themeColor="textSecondary">
-                RECENT
-              </ThemedText>
-            </View>
-            <ThemedText variant="body" themeColor="text">
-              No conversations yet
-            </ThemedText>
-            <ThemedText variant="bodySm" themeColor="textSecondary">
-              Start a chat and it will show up here.
-            </ThemedText>
-          </View>
-        </Pressable>
-      </Modal>
-    </>
+      </NativeSurface>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   pill: {
-    height: 28,
-    borderRadius: Radius.pill,
-    borderCurve: 'continuous',
-    borderWidth: 1,
+    height: 30,
     paddingHorizontal: 10,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  pressed: {
+    opacity: 0.6,
   },
   row: {
     flexDirection: 'row',
@@ -107,25 +84,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 14,
     letterSpacing: -0.1,
-  },
-  backdrop: {
-    flex: 1,
-    backgroundColor: Scrim.modal,
-  },
-  card: {
-    position: 'absolute',
-    alignSelf: 'center',
-    width: 260,
-    borderRadius: Radius.card,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    padding: Spacing.three,
-    gap: Spacing.one,
-  },
-  cardHead: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.one,
-    marginBottom: Spacing.one,
   },
 });

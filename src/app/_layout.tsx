@@ -8,6 +8,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { Colors } from '@/constants/theme';
 import { useAppFonts } from '@/hooks/use-app-fonts';
@@ -36,22 +37,24 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={scheme === 'dark' ? DarkTheme : DefaultTheme}>
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-      <Stack>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="home" options={{ headerShown: false, title: 'Home' }} />
-        <Stack.Screen name="super-chat" options={{ title: 'OpenCore', headerBackTitle: 'Home' }}>
-          <Stack.Header
-            style={{
-              color: colors.text,
-              shadowColor: 'transparent',
-              // The native tiers draw their own bar material — the iOS 26 glass
-              // bar and the Material app bar — so the app only paints a
-              // background where no native bar exists.
-              ...(hasNativeChrome ? null : { backgroundColor: colors.background }),
-            }}
-          />
-        </Stack.Screen>
-      </Stack>
+      <KeyboardProvider>
+        <Stack>
+          <Stack.Screen name="index" options={{ headerShown: false }} />
+          <Stack.Screen name="home" options={{ headerShown: false, title: 'Home' }} />
+          <Stack.Screen name="super-chat" options={{ title: 'OpenCore', headerBackTitle: 'Home' }}>
+            <Stack.Header
+              style={{
+                color: colors.text,
+                shadowColor: 'transparent',
+                // The native tiers draw their own bar material — the iOS 26 glass
+                // bar and the Material app bar — so the app only paints a
+                // background where no native bar exists.
+                ...(hasNativeChrome ? null : { backgroundColor: colors.background }),
+              }}
+            />
+          </Stack.Screen>
+        </Stack>
+      </KeyboardProvider>
     </ThemeProvider>
   );
 }
