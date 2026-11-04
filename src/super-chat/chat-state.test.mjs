@@ -1,10 +1,28 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { appendChatExchange, createInitialChatMessages, readChatSeed } from './chat-state.ts';
+import {
+  appendUserMessage,
+  createInitialChatMessages,
+  finishAssistantReply,
+  readChatSeed,
+  settleAssistantReply,
+  startAssistantAnswer,
+} from './chat-state.ts';
+import { countMarkdownWords, parseMarkdown } from './chat-markdown.ts';
 import { normalizeComposerDraft } from './composer-state.ts';
+import { DUMMY_REPLIES, pickDummyReply } from './dummy-replies.ts';
+import {
+  getReasoningDurationMs,
+  getStreamingDurationMs,
+  REASONING_WORD_STAGGER_MS,
+  STREAM_LEAD_IN_MS,
+  STREAM_TAIL_BUFFER_MS,
+  STREAM_WORD_DURATION_MS,
+  STREAM_WORD_STAGGER_MS,
+  tokenizeStreamingText,
+} from './streaming-timing.ts';
 
-const greeting = 'Halo. Saya OpenCore. Kirim pesan untuk mulai berbicara.';
-const reply = 'Pesan diterima. Penyedia model belum terhubung, jadi balasan ini masih lokal di perangkat.';
+const greeting = "Hi. I'm OpenCore. Send a message to start talking.";
 
 test('creates the initial assistant greeting', () => {
   assert.deepEqual(
@@ -12,20 +30,83 @@ test('creates the initial assistant greeting', () => {
     [{ role: 'assistant', text: greeting }],
   );
 });
-test('appends trimmed user text followed by the local assistant reply', () => {
-  const result = appendChatExchange([], '  Hai  ');
+
+test('appends trimmed user text without creating a reply', () => {
+  const result = appendUserMessage([], '  Hai  ');
   assert.deepEqual(
-    result.map(({ role, text }) => ({ role, text })),
-    [
-      { role: 'user', text: 'Hai' },
-      { role: 'assistant', text: reply },
-    ],
+    result.map(({ role, text, streaming }) => ({ role, text, streaming })),
+    [{ role: 'user', text: 'Hai', streaming: false }],
   );
 });
-test('blank exchanges preserve the existing array', () => {
+
+test('blank user messages preserve the existing array', () => {
   const messages = createInitialChatMessages();
-  assert.equal(appendChatExchange(messages, '  '), messages);
+  assert.equal(appendUserMessage(messages, '  '), messages);
 });
+
+test('finishes only the matching streaming reply', () => {
+  const messages = appendUserMessage(createInitialChatMessages(), 'Hai');
+  const reply = {
+    id: 'reply-1',
+    role: 'assistant',
+    text: 'Siap.',
+    streaming: true,
+    reasoning: 'Cukup singkat.',
+    reasoningStreaming: false,
+  };
+  const withReply = [...messages, reply];
+
+  const settled = finishAssistantReply(withReply, reply.id);
+  assert.equal(settled.at(-1).streaming, false);
+  assert.equal(finishAssistantReply(settled, reply.id), settled);
+});
+
+test('finishing an unknown reply preserves the existing array', () => {
+  const messages = createInitialChatMessages();
+  assert.equal(finishAssistantReply(messages, 'missing'), messages);
+});
+
+test('starts the answer and records the measured reasoning duration', () => {
+  const reply = {
+    id: 'reply-1',
+    role: 'assistant',
+    text: 'Jawaban lengkap.',
+    streaming: false,
+    reasoning: 'Pertimbangan.',
+    reasoningStreaming: true,
+  };
+
+  const started = startAssistantAnswer([reply], reply.id, 3);
+  assert.equal(started[0].streaming, true);
+  assert.equal(started[0].reasoningStreaming, false);
+  assert.equal(started[0].reasoningDuration, 3);
+  assert.equal(startAssistantAnswer([reply], 'missing', 3)[0], reply);
+});
+
+test('settling an interrupted reply does not overwrite a measured duration', () => {
+  const reply = {
+    id: 'reply-1',
+    role: 'assistant',
+    text: 'Jawaban lengkap.',
+    streaming: true,
+    reasoning: 'Pertimbangan.',
+    reasoningStreaming: false,
+    reasoningDuration: 3,
+  };
+
+  const settled = settleAssistantReply([reply], reply.id, 9);
+  assert.equal(settled[0].streaming, false);
+  assert.equal(settled[0].reasoningStreaming, false);
+  assert.equal(settled[0].reasoningDuration, 3);
+
+  const interrupted = settleAssistantReply(
+    [{ ...reply, reasoningDuration: undefined }],
+    reply.id,
+    2,
+  );
+  assert.equal(interrupted[0].reasoningDuration, 2);
+});
+
 test('reads and trims the first seed, rejecting missing or blank values', () => {
   assert.equal(readChatSeed(undefined), null);
   assert.equal(readChatSeed('  '), null);
@@ -33,7 +114,51 @@ test('reads and trims the first seed, rejecting missing or blank values', () => 
   assert.equal(readChatSeed([' first ', 'second']), 'first');
   assert.equal(readChatSeed([' ', 'ignored']), null);
 });
+
 test('normalizes composer drafts or returns null when blank', () => {
   assert.equal(normalizeComposerDraft('  hello  '), 'hello');
   assert.equal(normalizeComposerDraft(' \n '), null);
+});
+
+test('cycles dummy replies from short to long', () => {
+  assert.equal(DUMMY_REPLIES.length, 3);
+  assert.equal(pickDummyReply(0), DUMMY_REPLIES[0]);
+  assert.equal(pickDummyReply(2), DUMMY_REPLIES[2]);
+  assert.equal(pickDummyReply(3), DUMMY_REPLIES[0]);
+
+  const wordCounts = DUMMY_REPLIES.map(({ answer }) =>
+    countMarkdownWords(parseMarkdown(answer, { streaming: true })),
+  );
+  assert.ok(wordCounts[0] < wordCounts[1]);
+  assert.ok(wordCounts[1] < wordCounts[2]);
+  assert.ok(DUMMY_REPLIES.every(({ reasoning }) => reasoning.trim().length > 0));
+});
+
+test('tokenizes words and preserves whitespace for layout', () => {
+  const tokens = tokenizeStreamingText('Hai  dunia\nbaru');
+  assert.deepEqual(
+    tokens.map(({ text }) => text),
+    ['Hai', '  ', 'dunia', '\n', 'baru'],
+  );
+  assert.deepEqual(
+    tokens.filter(({ wordIndex }) => wordIndex >= 0).map(({ wordIndex }) => wordIndex),
+    [0, 1, 2],
+  );
+});
+
+test('stream duration covers lead-in, stagger, fade, and tail buffer', () => {
+  assert.equal(
+    getStreamingDurationMs('satu dua tiga'),
+    STREAM_LEAD_IN_MS + 3 * STREAM_WORD_STAGGER_MS + STREAM_WORD_DURATION_MS + STREAM_TAIL_BUFFER_MS,
+  );
+});
+
+test('reasoning duration uses its faster stagger', () => {
+  assert.equal(
+    getReasoningDurationMs('satu dua tiga'),
+    STREAM_LEAD_IN_MS +
+      3 * REASONING_WORD_STAGGER_MS +
+      STREAM_WORD_DURATION_MS +
+      STREAM_TAIL_BUFFER_MS,
+  );
 });
