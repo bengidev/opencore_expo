@@ -44,6 +44,15 @@ export function useKeyboardBottomPadding(
         // iOS reports negative heights while the keyboard is dismissing.
         padding.value = Math.max(event.height, 0) + base;
       },
+      onInteractive: (event) => {
+        'worklet';
+
+        const progress = Math.min(Math.max(event.progress, 0), 1);
+        const base = restingPadding + (openPadding - restingPadding) * progress;
+
+        keyboardProgress.value = progress;
+        padding.value = Math.max(event.height, 0) + base;
+      },
       onEnd: (event) => {
         'worklet';
 
