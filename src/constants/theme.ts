@@ -39,6 +39,7 @@ export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
 /** Nothing design stack: Doto (display), Space Grotesk (UI), Space Mono (labels/data). */
 export const Fonts = {
   display: 'Doto_400Regular',
+  displayBold: 'Doto_700Bold',
   sansLight: 'SpaceGrotesk_300Light',
   sans: 'SpaceGrotesk_400Regular',
   sansMedium: 'SpaceGrotesk_500Medium',

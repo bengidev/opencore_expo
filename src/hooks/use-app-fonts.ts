@@ -1,4 +1,5 @@
 import { Doto_400Regular } from '@expo-google-fonts/doto/400Regular';
+import { Doto_700Bold } from '@expo-google-fonts/doto/700Bold';
 import { SpaceGrotesk_300Light } from '@expo-google-fonts/space-grotesk/300Light';
 import { SpaceGrotesk_400Regular } from '@expo-google-fonts/space-grotesk/400Regular';
 import { SpaceGrotesk_500Medium } from '@expo-google-fonts/space-grotesk/500Medium';
@@ -10,6 +11,7 @@ import { useFonts } from 'expo-font';
 export function useAppFonts(): [boolean, Error | null] {
   return useFonts({
     Doto_400Regular,
+    Doto_700Bold,
     SpaceGrotesk_300Light,
     SpaceGrotesk_400Regular,
     SpaceGrotesk_500Medium,
