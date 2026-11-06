@@ -5,7 +5,7 @@ import { ThemedText } from '@/components/themed-text';
 export function HomePrompt() {
   return (
     <ThemedText
-      face="sansLight"
+      face="displayBold"
       themeColor="text"
       accessibilityRole="header"
       style={styles.prompt}>
@@ -17,9 +17,8 @@ export function HomePrompt() {
 const styles = StyleSheet.create({
   prompt: {
     fontSize: 34,
-    lineHeight: 40,
-    letterSpacing: -0.9,
-    fontWeight: '300',
+    lineHeight: 42,
+    letterSpacing: -0.34,
     textAlign: 'center',
   },
 });
