@@ -1,13 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  appendReplyDelta,
   appendUserMessage,
   createInitialChatMessages,
+  failAssistantReply,
   finishAssistantReply,
   readChatSeed,
   settleAssistantReply,
   startAssistantAnswer,
 } from './chat-state.ts';
+import { createChatMessage } from './chat-message.ts';
 import { countMarkdownWords, parseMarkdown } from './chat-markdown.ts';
 import { normalizeComposerDraft } from './composer-state.ts';
 import { DUMMY_REPLIES, pickDummyReply } from './dummy-replies.ts';
@@ -23,6 +26,10 @@ import {
 } from './streaming-timing.ts';
 
 const greeting = "Hi. I'm OpenCore. Send a message to start talking.";
+
+function idIndex(messages) {
+  return messages.findIndex((message) => message.role === 'assistant');
+}
 
 test('creates the initial assistant greeting', () => {
   assert.deepEqual(
@@ -161,4 +168,39 @@ test('reasoning duration uses its faster stagger', () => {
       STREAM_WORD_DURATION_MS +
       STREAM_TAIL_BUFFER_MS,
   );
+});
+
+test('deltas append without replacing unaffected messages', () => {
+  const start = [
+    createChatMessage('user', 'hi'),
+    createChatMessage('assistant', '', { streaming: true }),
+  ];
+  const id = start[1].id;
+  const withText = appendReplyDelta(start, id, 'text', 'Hel');
+  const withMore = appendReplyDelta(withText, id, 'text', 'lo');
+  assert.equal(withMore[idIndex(withMore)].text, 'Hello');
+  assert.equal(withMore[0], start[0]);
+  assert.equal(appendReplyDelta(withMore, id, 'text', ''), withMore);
+  assert.equal(
+    appendReplyDelta(withMore, id, 'reasoning', 'hmm')[idIndex(withMore)].reasoningStreaming,
+    true,
+  );
+});
+
+test('a failed reply stops streaming and carries a code', () => {
+  const start = [
+    createChatMessage('assistant', 'par', { streaming: true, reasoningStreaming: true }),
+  ];
+  const failed = failAssistantReply(start, start[0].id, {
+    code: 'rate-limit',
+    message: 'slow down',
+    retryable: true,
+  });
+  assert.equal(failed[0].streaming, false);
+  assert.equal(failed[0].reasoningStreaming, false);
+  assert.deepEqual(failed[0].error, {
+    code: 'rate-limit',
+    message: 'slow down',
+    retryable: true,
+  });
 });
