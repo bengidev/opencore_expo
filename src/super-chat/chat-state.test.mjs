@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   appendReplyDelta,
   appendUserMessage,
+  beginAssistantReply,
   createInitialChatMessages,
   failAssistantReply,
   finishAssistantReply,
@@ -32,10 +33,12 @@ function idIndex(messages) {
 }
 
 test('creates the initial assistant greeting', () => {
+  const messages = createInitialChatMessages();
   assert.deepEqual(
-    createInitialChatMessages().map(({ role, text }) => ({ role, text })),
+    messages.map(({ role, text }) => ({ role, text })),
     [{ role: 'assistant', text: greeting }],
   );
+  assert.equal(messages[0].localOnly, true);
 });
 
 test('appends trimmed user text without creating a reply', () => {
@@ -177,6 +180,8 @@ test('deltas append without replacing unaffected messages', () => {
   ];
   const id = start[1].id;
   const withText = appendReplyDelta(start, id, 'text', 'Hel');
+  assert.notEqual(withText, start);
+  assert.equal(start[1].text, '');
   const withMore = appendReplyDelta(withText, id, 'text', 'lo');
   assert.equal(withMore[idIndex(withMore)].text, 'Hello');
   assert.equal(withMore[0], start[0]);
@@ -187,9 +192,34 @@ test('deltas append without replacing unaffected messages', () => {
   );
 });
 
+test('whitespace-only deltas are dropped on purpose', () => {
+  const start = [createChatMessage('assistant', 'Hello', { streaming: true })];
+  const id = start[0].id;
+  assert.equal(appendReplyDelta(start, id, 'text', '   '), start);
+  assert.equal(appendReplyDelta(start, id, 'text', '\n'), start);
+  assert.equal(appendReplyDelta(start, id, 'reasoning', ' '), start);
+  assert.equal(start[0].text, 'Hello');
+  assert.equal(start[0].reasoning, '');
+});
+
+test('beginning a reply starts streaming and keeps identity when nothing changes', () => {
+  const start = [createChatMessage('assistant', '')];
+  const id = start[0].id;
+
+  const begun = beginAssistantReply(start, id);
+  assert.notEqual(begun, start);
+  assert.equal(begun[0].streaming, true);
+  assert.equal(beginAssistantReply(begun, id), begun);
+  assert.equal(beginAssistantReply(start, 'missing'), start);
+});
+
 test('a failed reply stops streaming and carries a code', () => {
   const start = [
-    createChatMessage('assistant', 'par', { streaming: true, reasoningStreaming: true }),
+    createChatMessage('assistant', 'par', {
+      streaming: true,
+      reasoning: 'because',
+      reasoningStreaming: true,
+    }),
   ];
   const failed = failAssistantReply(start, start[0].id, {
     code: 'rate-limit',
@@ -198,6 +228,8 @@ test('a failed reply stops streaming and carries a code', () => {
   });
   assert.equal(failed[0].streaming, false);
   assert.equal(failed[0].reasoningStreaming, false);
+  assert.equal(failed[0].text, 'par');
+  assert.equal(failed[0].reasoning, 'because');
   assert.deepEqual(failed[0].error, {
     code: 'rate-limit',
     message: 'slow down',

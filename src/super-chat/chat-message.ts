@@ -1,4 +1,4 @@
-import type { ChatErrorCode } from '@/super-chat/llm/types';
+import type { ChatErrorCode } from './llm/types.ts';
 
 export type ChatRole = 'user' | 'assistant';
 
@@ -18,7 +18,7 @@ export type ChatMessage = {
   reasoningStreaming: boolean;
   /** Whole seconds the reasoning trace took, once it has finished. */
   reasoningDuration?: number;
-  /** Why the reply stopped early; cleared when a retry starts. */
+  /** Why the reply stopped early; set when the reply fails. */
   error?: ChatMessageError;
   /** Lives only in this conversation — never sent to the provider. */
   localOnly?: true;
@@ -46,7 +46,7 @@ export function createChatMessage(
     reasoning: options.reasoning ?? '',
     reasoningStreaming: options.reasoningStreaming ?? false,
     reasoningDuration: options.reasoningDuration,
-    error: options.error,
-    localOnly: options.localOnly,
+    ...(options.error ? { error: options.error } : {}),
+    ...(options.localOnly ? { localOnly: options.localOnly } : {}),
   };
 }

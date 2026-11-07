@@ -87,11 +87,10 @@ export function startAssistantAnswer(
   id: string,
   reasoningDuration: number,
 ): ChatMessage[] {
-  return updateAssistantReply(messages, id, {
-    reasoningStreaming: false,
-    reasoningDuration,
-    streaming: true,
-  });
+  return beginAssistantReply(
+    updateAssistantReply(messages, id, { reasoningStreaming: false, reasoningDuration }),
+    id,
+  );
 }
 
 export function finishAssistantReply(messages: ChatMessage[], id: string): ChatMessage[] {
