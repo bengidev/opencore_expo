@@ -16,7 +16,10 @@ import {
 type ComposerModelSheetProps = {
   models: readonly HomeModel[];
   selectedId: string;
+  /** Thinking level per model id, owned by the screen. */
+  thinkingByModel: Record<string, ThinkingLevel>;
   variant?: ComposerControlVariant;
+  onThinkingChange: (modelId: string, level: ThinkingLevel) => void;
   onSelect: (id: string) => void;
 };
 
@@ -28,17 +31,14 @@ type ComposerModelSheetProps = {
 export function ComposerModelSheet({
   models,
   selectedId,
+  thinkingByModel,
   variant,
+  onThinkingChange,
   onSelect,
 }: ComposerModelSheetProps) {
   const theme = useTheme();
   const sheetRef = useRef<BottomSheet>(null);
   const [query, setQuery] = useState('');
-  /**
-   * The thinking level each model was last set to. Models without a level
-   * never enter the map, and absent models fall back to their default.
-   */
-  const [thinkingByModel, setThinkingByModel] = useState<Record<string, ThinkingLevel>>({});
   /** Bumped on open and close so any overlay inside the sheet lets go. */
   const [resetKey, setResetKey] = useState(0);
   /**
@@ -50,7 +50,7 @@ export function ComposerModelSheet({
   /** The last height we asked the sheet for, to tell our own snaps from a drag. */
   const requestedSnapIndex = useRef(MODEL_SHEET_DEFAULT_SNAP_INDEX);
 
-  const selected = models.find((model) => model.id === selectedId) ?? models[0];
+  const selected = models.find((model) => model.id === selectedId) ?? models[0] ?? null;
 
   const open = useCallback(() => {
     setQuery('');
@@ -67,12 +67,13 @@ export function ComposerModelSheet({
     }
   }, []);
 
-  const handleThinkingChange = useCallback((modelId: string, level: ThinkingLevel) => {
-    setThinkingByModel((current) =>
-      current[modelId] === level ? current : { ...current, [modelId]: level },
-    );
-    void Haptics.selectionAsync().catch(() => {});
-  }, []);
+  const handleThinkingChange = useCallback(
+    (modelId: string, level: ThinkingLevel) => {
+      onThinkingChange(modelId, level);
+      void Haptics.selectionAsync().catch(() => {});
+    },
+    [onThinkingChange],
+  );
 
   const handleSelect = useCallback(
     (id: string) => {
@@ -81,6 +82,10 @@ export function ComposerModelSheet({
     },
     [onSelect],
   );
+
+  // An empty catalogue has nothing to trigger, and the chip must never render
+  // an undefined model.
+  if (selected === null) return null;
 
   return (
     <>

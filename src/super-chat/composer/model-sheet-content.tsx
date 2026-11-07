@@ -8,7 +8,6 @@ import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import {
   MODEL_CAPABILITIES,
-  defaultThinkingLevel,
   filterHomeModels,
   type HomeModel,
   type ModelCapabilityId,
@@ -28,6 +27,7 @@ import {
   THINKING_TRIGGER_WIDTH,
 } from '@/super-chat/composer/model-sheet-metrics';
 import { ThinkingLevelControl } from '@/super-chat/composer/model-thinking-control';
+import { defaultThinkingLevelFor } from '@/super-chat/llm/thinking';
 
 type ModelSheetContentProps = {
   models: readonly HomeModel[];
@@ -151,7 +151,7 @@ export function ModelSheetContent({
             isSelected={item.id === selectedId}
             thinkingLevel={
               item.thinkingLevels.length > 0
-                ? (thinkingByModel[item.id] ?? defaultThinkingLevel(item))
+                ? (thinkingByModel[item.id] ?? defaultThinkingLevelFor(item.thinkingLevels))
                 : null
             }
             activeCapabilityId={

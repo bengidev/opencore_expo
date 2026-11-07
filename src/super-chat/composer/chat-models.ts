@@ -1,4 +1,5 @@
 import type { ComposerFallbackIcon, ComposerSymbolName } from '@/super-chat/composer/symbols';
+import type { ProviderModel } from '@/super-chat/llm/types';
 
 /** What a model can take in and work with. Rendered as badges in the sheet. */
 export type ModelCapabilityId =
@@ -116,8 +117,6 @@ export type HomeModel = {
   thinkingLevels: readonly ThinkingLevel[];
   /** Extra terms the search field should match. */
   keywords: readonly string[];
-  /** `false` marks a placeholder row that only exists to exercise the sheet UI. */
-  isLive: boolean;
 };
 
 /** Material Symbols used by the native Android trigger. */
@@ -130,145 +129,66 @@ export type HomeModelAndroidIcon =
   | 'globe'
   | 'edit_note'
   | 'analytics'
-  | 'shield';
+  | 'shield'
+  | 'image'
+  | 'videocam'
+  | 'graphic_eq'
+  | 'description'
+  | 'chat';
 
-/** Models offered by the composer, in the order they are presented. */
-export const HOME_MODELS: readonly HomeModel[] = [
+type ModelVisual = {
+  iosSymbol: ComposerSymbolName;
+  androidIcon: HomeModelAndroidIcon;
+};
+
+/** The capability that gives a model its icon, most specific first. */
+const MODEL_VISUALS: readonly { capability: ModelCapabilityId; visual: ModelVisual }[] = [
+  { capability: 'image', visual: { iosSymbol: 'photo', androidIcon: 'image' } },
+  { capability: 'video', visual: { iosSymbol: 'video', androidIcon: 'videocam' } },
+  { capability: 'audio', visual: { iosSymbol: 'waveform', androidIcon: 'graphic_eq' } },
   {
-    id: 'opencore',
-    name: 'OpenCore',
-    description: 'Balanced default for everyday questions',
-    iosSymbol: 'sparkles',
-    androidIcon: 'auto_awesome_mosaic',
+    capability: 'documents',
+    visual: { iosSymbol: 'doc.text', androidIcon: 'description' },
+  },
+  {
+    capability: 'code',
+    visual: {
+      iosSymbol: 'chevron.left.forwardslash.chevron.right',
+      androidIcon: 'code',
+    },
+  },
+  { capability: 'web', visual: { iosSymbol: 'globe', androidIcon: 'globe' } },
+  { capability: 'reasoning', visual: { iosSymbol: 'brain', androidIcon: 'psychology' } },
+];
+
+const DEFAULT_MODEL_VISUAL: ModelVisual = { iosSymbol: 'bubble.left', androidIcon: 'chat' };
+
+function visualFor(model: ProviderModel): ModelVisual {
+  return (
+    MODEL_VISUALS.find(({ capability }) => model.capabilities.includes(capability))?.visual ??
+    DEFAULT_MODEL_VISUAL
+  );
+}
+
+/** Search terms: the spoken name, plus the raw id so an exact slug still matches. */
+function keywordsFor(model: ProviderModel): string[] {
+  return [model.label.toLowerCase(), model.id].filter((keyword) => keyword.length > 0);
+}
+
+/** Presents a provider model in the vocabulary the model sheet already speaks. */
+export function toHomeModel(model: ProviderModel): HomeModel {
+  const visual = visualFor(model);
+  return {
+    id: model.id,
+    name: model.label,
+    description: model.description,
+    iosSymbol: visual.iosSymbol,
+    androidIcon: visual.androidIcon,
     fallbackIcon: 'auto-awesome',
-    capabilities: ['text', 'image', 'web'],
-    thinkingLevels: THINKING_LEVELS,
-    keywords: ['default', 'balanced', 'general'],
-    isLive: true,
-  },
-  {
-    id: 'fast',
-    name: 'Fast',
-    description: 'Low-latency answers for quick replies',
-    iosSymbol: 'bolt.fill',
-    androidIcon: 'bolt',
-    fallbackIcon: 'bolt',
-    capabilities: ['text'],
-    thinkingLevels: THINKING_LEVELS,
-    keywords: ['quick', 'latency', 'snappy'],
-    isLive: true,
-  },
-  {
-    id: 'deep',
-    name: 'Deep',
-    description: 'Long-form reasoning with more context',
-    iosSymbol: 'brain.head.profile',
-    androidIcon: 'psychology',
-    fallbackIcon: 'psychology',
-    capabilities: ['text', 'reasoning'],
-    thinkingLevels: THINKING_LEVELS,
-    keywords: ['reasoning', 'long', 'thoughtful'],
-    isLive: true,
-  },
-];
-
-/**
- * Placeholder models. They give the sheet a list worth scrolling and filtering
- * while the real catalogue is still being built — swap them for the API
- * response without touching the sheet itself.
- */
-export const HOME_MODEL_PREVIEWS: readonly HomeModel[] = [
-  {
-    id: 'preview-vision',
-    name: 'Vision',
-    description: 'Reads screenshots, photos and scans',
-    iosSymbol: 'square.stack.3d.up.fill',
-    androidIcon: 'image_search',
-    fallbackIcon: 'image-search',
-    capabilities: ['text', 'image', 'documents'],
-    thinkingLevels: [],
-    keywords: ['image', 'photo', 'screenshot', 'ocr', 'document'],
-    isLive: false,
-  },
-  {
-    id: 'preview-coder',
-    name: 'Coder',
-    description: 'Writes, refactors and reviews source files',
-    iosSymbol: 'terminal',
-    androidIcon: 'code',
-    fallbackIcon: 'code',
-    capabilities: ['text', 'code', 'documents'],
-    thinkingLevels: THINKING_LEVELS,
-    keywords: ['code', 'programming', 'debug', 'review', 'repository'],
-    isLive: false,
-  },
-  {
-    id: 'preview-research',
-    name: 'Research',
-    description: 'Cites sources across the open web',
-    iosSymbol: 'globe',
-    androidIcon: 'globe',
-    fallbackIcon: 'public',
-    capabilities: ['text', 'web', 'documents'],
-    thinkingLevels: THINKING_LEVELS,
-    keywords: ['search', 'web', 'sources', 'browse', 'cite'],
-    isLive: false,
-  },
-  {
-    id: 'preview-writer',
-    name: 'Writer',
-    description: 'Drafts posts, docs and release notes',
-    iosSymbol: 'text.bubble.fill',
-    androidIcon: 'edit_note',
-    fallbackIcon: 'edit-note',
-    capabilities: ['text'],
-    thinkingLevels: [],
-    keywords: ['draft', 'copy', 'prose', 'notes', 'editor'],
-    isLive: false,
-  },
-  {
-    id: 'preview-analyst',
-    name: 'Analyst',
-    description: 'Turns raw numbers into a readable story',
-    iosSymbol: 'chart.bar.fill',
-    androidIcon: 'analytics',
-    fallbackIcon: 'analytics',
-    capabilities: ['text', 'documents'],
-    thinkingLevels: THINKING_LEVELS,
-    keywords: ['data', 'chart', 'metrics', 'report', 'insight'],
-    isLive: false,
-  },
-  {
-    id: 'preview-guard',
-    name: 'Guard',
-    description: 'Reviews diffs before they reach main',
-    iosSymbol: 'shield.lefthalf.filled',
-    androidIcon: 'shield',
-    fallbackIcon: 'security',
-    capabilities: ['text', 'code'],
-    thinkingLevels: [],
-    keywords: ['review', 'safety', 'diff', 'security', 'audit'],
-    isLive: false,
-  },
-];
-
-/** Every row the model sheet can show: the live models first, previews after. */
-export const HOME_MODEL_SHEET_ITEMS: readonly HomeModel[] = [
-  ...HOME_MODELS,
-  ...HOME_MODEL_PREVIEWS,
-];
-
-export const DEFAULT_HOME_MODEL_ID = HOME_MODELS[0].id;
-
-/**
- * The level a model starts on. Medium is the balanced default when a model
- * offers it; otherwise pick the middle of its range so the control never opens
- * pinned to an extreme.
- */
-export function defaultThinkingLevel(model: HomeModel): ThinkingLevel | null {
-  if (model.thinkingLevels.length === 0) return null;
-  if (model.thinkingLevels.includes('medium')) return 'medium';
-  return model.thinkingLevels[Math.floor((model.thinkingLevels.length - 1) / 2)];
+    capabilities: model.capabilities,
+    thinkingLevels: model.thinkingLevels,
+    keywords: keywordsFor(model),
+  };
 }
 
 function matchesModel(model: HomeModel, needle: string): boolean {

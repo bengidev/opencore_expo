@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { type ReactNode, useState } from 'react';
+import type { ReactNode } from 'react';
 import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
@@ -11,7 +11,7 @@ import { Typography } from '@/constants/typography';
 import { useFontFamily } from '@/hooks/use-font-family';
 import { useTheme } from '@/hooks/use-theme';
 import { hasNativeChrome } from '@/lib/ui-tier';
-import { DEFAULT_HOME_MODEL_ID, HOME_MODEL_SHEET_ITEMS } from '@/super-chat/composer/chat-models';
+import type { HomeModel, ThinkingLevel } from '@/super-chat/composer/chat-models';
 import { QUICK_ACTIONS, type ComposerActionItem } from '@/super-chat/composer/composer-actions';
 import { ComposerActionsPopover } from '@/super-chat/composer/composer-actions-popover';
 import { ComposerModelSheet } from '@/super-chat/composer/composer-model-sheet';
@@ -23,6 +23,14 @@ export type SuperChatComposerProps = {
   onDraftChange: (value: string) => void;
   onSubmit: (message: string) => void;
   onNewChat: () => void;
+  /** The live catalogue, already shaped for the sheet. */
+  models: readonly HomeModel[];
+  /** The selected model id, owned by the screen so both surfaces agree. */
+  modelId: string;
+  /** Thinking level per model id; the sheet reads and writes it. */
+  thinkingByModel: Record<string, ThinkingLevel>;
+  onModelSelect: (id: string) => void;
+  onThinkingChange: (modelId: string, level: ThinkingLevel) => void;
   translucent?: boolean;
 };
 
@@ -31,16 +39,20 @@ export function SuperChatComposer({
   onDraftChange,
   onSubmit,
   onNewChat,
+  models,
+  modelId,
+  thinkingByModel,
+  onModelSelect,
+  onThinkingChange,
   translucent = false,
 }: SuperChatComposerProps) {
   const theme = useTheme();
   const reducedMotion = useReducedMotion();
   const sans = useFontFamily('sans');
-  const [modelId, setModelId] = useState(DEFAULT_HOME_MODEL_ID);
   const trimmed = draft.trim();
 
   function handleModelSelect(id: string) {
-    setModelId(id);
+    onModelSelect(id);
     void Haptics.selectionAsync().catch(() => {});
   }
 
@@ -90,8 +102,10 @@ export function SuperChatComposer({
       />
       <View style={styles.toolbar}>
         <ComposerModelSheet
-          models={HOME_MODEL_SHEET_ITEMS}
+          models={models}
           selectedId={modelId}
+          thinkingByModel={thinkingByModel}
+          onThinkingChange={onThinkingChange}
           onSelect={handleModelSelect}
         />
         <View style={styles.toolbarSpacer} />

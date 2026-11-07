@@ -30,18 +30,21 @@ import type { ComposerControlVariant } from '@/super-chat/composer/composer-acti
 import { ComposerModelTrigger } from '@/super-chat/composer/composer-model-trigger';
 import {
   THINKING_LEVEL_LABELS,
-  defaultThinkingLevel,
   filterHomeModels,
   type HomeModel,
   type HomeModelAndroidIcon,
   type ModelCapabilityId,
   type ThinkingLevel,
 } from '@/super-chat/composer/chat-models';
+import { defaultThinkingLevelFor } from '@/super-chat/llm/thinking';
 
 type ComposerModelSheetProps = {
   models: readonly HomeModel[];
   selectedId: string;
+  /** Thinking level per model id, owned by the screen. */
+  thinkingByModel: Record<string, ThinkingLevel>;
   variant?: ComposerControlVariant;
+  onThinkingChange: (modelId: string, level: ThinkingLevel) => void;
   onSelect: (id: string) => void;
 };
 
@@ -55,6 +58,11 @@ const MODEL_ICONS: Record<HomeModelAndroidIcon, ImageSourcePropType> = {
   edit_note: require('@expo/material-symbols/edit_note.xml'),
   analytics: require('@expo/material-symbols/analytics.xml'),
   shield: require('@expo/material-symbols/shield.xml'),
+  image: require('@expo/material-symbols/image.xml'),
+  videocam: require('@expo/material-symbols/videocam.xml'),
+  graphic_eq: require('@expo/material-symbols/graphic_eq.xml'),
+  description: require('@expo/material-symbols/description.xml'),
+  chat: require('@expo/material-symbols/chat.xml'),
 };
 
 const SEARCH_ICON: ImageSourcePropType = require('@expo/material-symbols/search.xml');
@@ -82,7 +90,9 @@ const CAPABILITY_ICONS: Record<ModelCapabilityId, ImageSourcePropType> = {
 export function ComposerModelSheet({
   models,
   selectedId,
+  thinkingByModel,
   variant,
+  onThinkingChange,
   onSelect,
 }: ComposerModelSheetProps) {
   const theme = useTheme();
@@ -92,10 +102,9 @@ export function ComposerModelSheet({
   const [query, setQuery] = useState('');
   /** Which model's thinking-level menu is expanded, if any. */
   const [levelMenuFor, setLevelMenuFor] = useState<string | null>(null);
-  const [thinkingByModel, setThinkingByModel] = useState<Record<string, ThinkingLevel>>({});
 
   const visibleModels = useMemo(() => filterHomeModels(models, query), [models, query]);
-  const selected = models.find((model) => model.id === selectedId) ?? models[0];
+  const selected = models.find((model) => model.id === selectedId) ?? models[0] ?? null;
 
   function close() {
     setIsOpen(false);
@@ -109,12 +118,14 @@ export function ComposerModelSheet({
   }
 
   function handleThinkingChange(modelId: string, level: ThinkingLevel) {
-    setThinkingByModel((current) =>
-      current[modelId] === level ? current : { ...current, [modelId]: level },
-    );
+    onThinkingChange(modelId, level);
     setLevelMenuFor(null);
     void Haptics.selectionAsync().catch(() => {});
   }
+
+  // An empty catalogue has nothing to trigger, and the chip must never render
+  // an undefined model.
+  if (selected === null) return null;
 
   return (
     <>
@@ -176,7 +187,8 @@ export function ComposerModelSheet({
               </Text>
               <LazyColumn modifiers={[fillMaxWidth(), weight(1)]}>
                 {visibleModels.map((model) => {
-                  const level = thinkingByModel[model.id] ?? defaultThinkingLevel(model);
+                  const level =
+                    thinkingByModel[model.id] ?? defaultThinkingLevelFor(model.thinkingLevels);
                   const isSelected = model.id === selectedId;
 
                   // The key carries the level: Compose's `LazyColumn` reuses rows whose

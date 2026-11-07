@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { PanelUIProvider } from 'panelui-native/provider';
-import { useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Dimensions, Platform, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,7 +15,10 @@ import { SuggestionCarousel } from '@/home/suggestion-carousel';
 import { useHomeEntrance } from '@/home/use-home-entrance';
 import { useKeyboardBottomPadding } from '@/hooks/use-keyboard-bottom-padding';
 import { SharkGlass, SharkOceanStage } from '@/onboarding/shark-ocean/shark-ocean-stage';
+import { toHomeModel } from '@/super-chat/composer/chat-models';
 import { SuperChatComposer } from '@/super-chat/composer/super-chat-composer';
+import { selectThinkingLevel } from '@/super-chat/llm/model-selection-store';
+import { useModelCatalog } from '@/super-chat/llm/use-model-catalog';
 
 const isStaticWebRender = Platform.OS === 'web' && typeof window === 'undefined';
 
@@ -40,7 +43,16 @@ export function HomeScreen() {
     reservedBottom,
   );
   const [draft, setDraft] = useState('');
-  
+  const { models, selectedModel, selection, selectModel } = useModelCatalog();
+  const homeModels = useMemo(() => models.map(toHomeModel), [models]);
+
+  const handleModelSelect = useCallback(
+    (id: string) => {
+      const model = models.find((entry) => entry.id === id);
+      if (model) selectModel(model);
+    },
+    [models, selectModel],
+  );
 
   /**
    * The Android tab router lays the screen out between the status bar and the
@@ -106,6 +118,11 @@ export function HomeScreen() {
                   onDraftChange={setDraft}
                   onSubmit={handleSubmit}
                   onNewChat={() => router.push('/super-chat')}
+                  models={homeModels}
+                  modelId={selectedModel.id}
+                  thinkingByModel={selection.thinkingByModel}
+                  onModelSelect={handleModelSelect}
+                  onThinkingChange={selectThinkingLevel}
                 />
               </Animated.View>
             </View>

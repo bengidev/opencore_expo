@@ -17,6 +17,11 @@ const MODEL_ICONS: Record<HomeModelAndroidIcon, ImageSourcePropType> = {
   edit_note: require('@expo/material-symbols/edit_note.xml'),
   analytics: require('@expo/material-symbols/analytics.xml'),
   shield: require('@expo/material-symbols/shield.xml'),
+  image: require('@expo/material-symbols/image.xml'),
+  videocam: require('@expo/material-symbols/videocam.xml'),
+  graphic_eq: require('@expo/material-symbols/graphic_eq.xml'),
+  description: require('@expo/material-symbols/description.xml'),
+  chat: require('@expo/material-symbols/chat.xml'),
 };
 
 type ComposerModelTriggerProps = {

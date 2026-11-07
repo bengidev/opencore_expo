@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,7 +18,10 @@ import {
   startAssistantAnswer,
 } from '@/super-chat/chat-state';
 import { createChatMessage, type ChatMessage } from '@/super-chat/chat-message';
+import { toHomeModel } from '@/super-chat/composer/chat-models';
 import { SuperChatComposer } from '@/super-chat/composer/super-chat-composer';
+import { selectThinkingLevel } from '@/super-chat/llm/model-selection-store';
+import { useModelCatalog } from '@/super-chat/llm/use-model-catalog';
 import { pickDummyReply } from '@/super-chat/dummy-replies';
 import { MessageList } from '@/super-chat/message-list';
 import { getReasoningDurationMs } from '@/super-chat/streaming-timing';
@@ -44,6 +47,16 @@ export function SuperChatScreen() {
   const replyTurnRef = useRef(0);
   const [messages, setMessages] = useState<ChatMessage[]>(createInitialChatMessages);
   const [draft, setDraft] = useState('');
+  const { models, selectedModel, selection, selectModel } = useModelCatalog();
+  const homeModels = useMemo(() => models.map(toHomeModel), [models]);
+
+  const handleModelSelect = useCallback(
+    (id: string) => {
+      const model = models.find((entry) => entry.id === id);
+      if (model) selectModel(model);
+    },
+    [models, selectModel],
+  );
 
   const clearReplyTimers = useCallback(() => {
     if (reasoningTimerRef.current !== null) {
@@ -150,6 +163,11 @@ export function SuperChatScreen() {
             onDraftChange={setDraft}
             onSubmit={sendMessage}
             onNewChat={handleNewChat}
+            models={homeModels}
+            modelId={selectedModel.id}
+            thinkingByModel={selection.thinkingByModel}
+            onModelSelect={handleModelSelect}
+            onThinkingChange={selectThinkingLevel}
           />
         </View>
       </Animated.View>
