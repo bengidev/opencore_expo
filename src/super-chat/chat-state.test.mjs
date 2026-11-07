@@ -192,14 +192,16 @@ test('deltas append without replacing unaffected messages', () => {
   );
 });
 
-test('whitespace-only deltas are dropped on purpose', () => {
-  const start = [createChatMessage('assistant', 'Hello', { streaming: true })];
+test('only an empty chunk is a no-op; whitespace is appended', () => {
+  const start = [createChatMessage('assistant', 'Hi', { streaming: true })];
   const id = start[0].id;
-  assert.equal(appendReplyDelta(start, id, 'text', '   '), start);
-  assert.equal(appendReplyDelta(start, id, 'text', '\n'), start);
-  assert.equal(appendReplyDelta(start, id, 'reasoning', ' '), start);
-  assert.equal(start[0].text, 'Hello');
-  assert.equal(start[0].reasoning, '');
+
+  assert.equal(appendReplyDelta(start, id, 'text', ''), start);
+
+  const spaced = appendReplyDelta(appendReplyDelta(start, id, 'text', ' '), id, 'text', 'there');
+  assert.equal(spaced[0].text, 'Hi there');
+  assert.equal(start[0].text, 'Hi');
+  assert.equal(appendReplyDelta(start, id, 'reasoning', ' ')[0].reasoningStreaming, true);
 });
 
 test('beginning a reply starts streaming and keeps identity when nothing changes', () => {

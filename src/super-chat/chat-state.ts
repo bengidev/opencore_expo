@@ -42,7 +42,8 @@ export function beginAssistantReply(messages: ChatMessage[], id: string): ChatMe
 
 /**
  * Append one delta to the reply. Deltas are the only writers of `text` and
- * `reasoning`, so a later `updateAssistantReply` can never race them.
+ * `reasoning`, so a later `updateAssistantReply` can never race them. Only an
+ * empty chunk is a no-op — a lone space is real content between words.
  */
 export function appendReplyDelta(
   messages: ChatMessage[],
@@ -50,7 +51,7 @@ export function appendReplyDelta(
   field: 'text' | 'reasoning',
   chunk: string,
 ): ChatMessage[] {
-  if (!chunk.trim()) return messages;
+  if (chunk === '') return messages;
 
   let changed = false;
 
