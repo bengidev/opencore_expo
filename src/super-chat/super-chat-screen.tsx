@@ -1,35 +1,37 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import Animated, { useReducedMotion } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AndroidAppBar } from '@/components/android-app-bar';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing } from '@/constants/theme';
 import { useKeyboardBottomPadding } from '@/hooks/use-keyboard-bottom-padding';
-import { getMarkdownStreamingDurationMs } from '@/super-chat/chat-markdown';
 import {
   appendUserMessage,
+  applyStreamEvent,
   createInitialChatMessages,
-  finishAssistantReply,
   readChatSeed,
   settleAssistantReply,
-  startAssistantAnswer,
 } from '@/super-chat/chat-state';
 import { createChatMessage, type ChatMessage } from '@/super-chat/chat-message';
+import { toChatTurns } from '@/super-chat/chat-turns';
 import { toHomeModel } from '@/super-chat/composer/chat-models';
 import { SuperChatComposer } from '@/super-chat/composer/super-chat-composer';
+import type { ChatStreamEvent } from '@/super-chat/llm/types';
 import { selectThinkingLevel } from '@/super-chat/llm/model-selection-store';
 import { useModelCatalog } from '@/super-chat/llm/use-model-catalog';
-import { pickDummyReply } from '@/super-chat/dummy-replies';
 import { MessageList } from '@/super-chat/message-list';
-import { getReasoningDurationMs } from '@/super-chat/streaming-timing';
+import { useChatRequest } from '@/super-chat/use-chat-request';
 
 function elapsedSeconds(startedAt: number | null): number {
   if (startedAt === null) return 1;
   return Math.max(1, Math.round((Date.now() - startedAt) / 1000));
 }
+
+/** The reply currently receiving the stream, and when its trace began. */
+type ActiveReply = { id: string; startedAt: number };
 
 export function SuperChatScreen() {
   const insets = useSafeAreaInsets();
@@ -38,17 +40,26 @@ export function SuperChatScreen() {
     Spacing.three,
   );
   const { seed } = useLocalSearchParams<{ seed?: string }>();
-  const reducedMotion = useReducedMotion() ?? false;
   const appliedSeedRef = useRef<string | null>(null);
-  const reasoningTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const answerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const activeReplyIdRef = useRef<string | null>(null);
-  const activeReplyStartedAtRef = useRef<number | null>(null);
-  const replyTurnRef = useRef(0);
+  const activeReplyRef = useRef<ActiveReply | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>(createInitialChatMessages);
+  // The send and retry paths need the thread synchronously, before React has
+  // committed the last delta; the state mirror alone is one render behind.
+  const messagesRef = useRef(messages);
   const [draft, setDraft] = useState('');
-  const { models, selectedModel, selection, selectModel } = useModelCatalog();
+  const { provider, models, selectedModel, selection, thinking, selectModel } =
+    useModelCatalog();
   const homeModels = useMemo(() => models.map(toHomeModel), [models]);
+  const { start, abort } = useChatRequest({
+    provider,
+    modelId: selectedModel.id,
+    thinking,
+  });
+
+  const commit = useCallback((next: ChatMessage[]) => {
+    messagesRef.current = next;
+    setMessages(next);
+  }, []);
 
   const handleModelSelect = useCallback(
     (id: string) => {
@@ -58,24 +69,32 @@ export function SuperChatScreen() {
     [models, selectModel],
   );
 
-  const clearReplyTimers = useCallback(() => {
-    if (reasoningTimerRef.current !== null) {
-      clearTimeout(reasoningTimerRef.current);
-      reasoningTimerRef.current = null;
-    }
-    if (answerTimerRef.current !== null) {
-      clearTimeout(answerTimerRef.current);
-      answerTimerRef.current = null;
-    }
-  }, []);
+  const applyEvent = useCallback(
+    (id: string, event: ChatStreamEvent, startedAt: number) => {
+      if (
+        (event.type === 'done' || event.type === 'error') &&
+        activeReplyRef.current?.id === id
+      ) {
+        activeReplyRef.current = null;
+      }
+      commit(applyStreamEvent(messagesRef.current, id, event, elapsedSeconds(startedAt)));
+    },
+    [commit],
+  );
 
-  const finishReply = useCallback((id: string) => {
-    setMessages((current) => finishAssistantReply(current, id));
-    if (activeReplyIdRef.current === id) {
-      activeReplyIdRef.current = null;
-      activeReplyStartedAtRef.current = null;
-    }
-  }, []);
+  /** Appends the blank assistant message the stream will fill. */
+  const startReply = useCallback(
+    (history: ChatMessage[]) => {
+      const reply = createChatMessage('assistant', '', { streaming: true });
+      const startedAt = Date.now();
+      commit([...history, reply]);
+      activeReplyRef.current = { id: reply.id, startedAt };
+      void start(reply.id, toChatTurns(history), (id, event) => {
+        applyEvent(id, event, startedAt);
+      });
+    },
+    [applyEvent, commit, start],
+  );
 
   const sendMessage = useCallback(
     (raw: string) => {
@@ -83,53 +102,47 @@ export function SuperChatScreen() {
       if (!trimmed) return;
 
       setDraft('');
-      clearReplyTimers();
+      abort();
 
-      const interruptedId = activeReplyIdRef.current;
-      const interruptedAt = activeReplyStartedAtRef.current;
-      activeReplyIdRef.current = null;
-      activeReplyStartedAtRef.current = null;
+      const interrupted = activeReplyRef.current;
+      activeReplyRef.current = null;
+      const settled = interrupted
+        ? settleAssistantReply(
+            messagesRef.current,
+            interrupted.id,
+            elapsedSeconds(interrupted.startedAt),
+          )
+        : messagesRef.current;
 
-      setMessages((current) => {
-        const settled = interruptedId
-          ? settleAssistantReply(current, interruptedId, elapsedSeconds(interruptedAt))
-          : current;
-        return appendUserMessage(settled, trimmed);
-      });
-
-      const reply = pickDummyReply(replyTurnRef.current);
-      replyTurnRef.current += 1;
-
-      const reasoningMs = getReasoningDurationMs(reply.reasoning);
-      const answerMs = getMarkdownStreamingDurationMs(reply.answer);
-
-      const message = createChatMessage('assistant', reply.answer, {
-        streaming: !reducedMotion,
-        reasoning: reply.reasoning,
-        reasoningStreaming: !reducedMotion,
-        reasoningDuration: reducedMotion
-          ? Math.max(1, Math.round(reasoningMs / 1000))
-          : undefined,
-      });
-      setMessages((current) => [...current, message]);
-
-      if (reducedMotion) return;
-
-      activeReplyIdRef.current = message.id;
-      activeReplyStartedAtRef.current = Date.now();
-
-      reasoningTimerRef.current = setTimeout(() => {
-        reasoningTimerRef.current = null;
-        const duration = elapsedSeconds(activeReplyStartedAtRef.current);
-        setMessages((current) => startAssistantAnswer(current, message.id, duration));
-
-        answerTimerRef.current = setTimeout(() => {
-          answerTimerRef.current = null;
-          finishReply(message.id);
-        }, answerMs);
-      }, reasoningMs);
+      const withUser = appendUserMessage(settled, trimmed);
+      if (withUser === settled) return;
+      startReply(withUser);
     },
-    [clearReplyTimers, finishReply, reducedMotion],
+    [abort, startReply],
+  );
+
+  const handleNewChat = useCallback(() => {
+    abort();
+    activeReplyRef.current = null;
+    commit(createInitialChatMessages());
+    setDraft('');
+  }, [abort, commit]);
+
+  /**
+   * Retry the newest reply only: earlier answers have turns after them, so
+   * re-running one would ask the provider to invent over settled history.
+   */
+  const retryMessage = useCallback(
+    (id: string) => {
+      const current = messagesRef.current;
+      const index = current.findIndex((message) => message.id === id);
+      if (index === -1 || index !== current.length - 1) return;
+
+      abort();
+      activeReplyRef.current = null;
+      startReply(current.slice(0, index));
+    },
+    [abort, startReply],
   );
 
   useEffect(() => {
@@ -139,24 +152,11 @@ export function SuperChatScreen() {
     sendMessage(trimmed);
   }, [seed, sendMessage]);
 
-  useEffect(() => {
-    return () => clearReplyTimers();
-  }, [clearReplyTimers]);
-
-  function handleNewChat() {
-    clearReplyTimers();
-    activeReplyIdRef.current = null;
-    activeReplyStartedAtRef.current = null;
-    replyTurnRef.current = 0;
-    setMessages(createInitialChatMessages());
-    setDraft('');
-  }
-
   return (
     <ThemedView style={styles.screen}>
       <AndroidAppBar title="OpenCore" />
       <Animated.View style={[styles.column, keyboardPadding]}>
-        <MessageList messages={messages} />
+        <MessageList messages={messages} onRetry={retryMessage} />
         <View style={styles.composer}>
           <SuperChatComposer
             draft={draft}

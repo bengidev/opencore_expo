@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   appendReplyDelta,
   appendUserMessage,
+  applyStreamEvent,
   beginAssistantReply,
   createInitialChatMessages,
   failAssistantReply,
@@ -12,19 +13,7 @@ import {
   startAssistantAnswer,
 } from './chat-state.ts';
 import { createChatMessage } from './chat-message.ts';
-import { countMarkdownWords, parseMarkdown } from './chat-markdown.ts';
 import { normalizeComposerDraft } from './composer-state.ts';
-import { DUMMY_REPLIES, pickDummyReply } from './dummy-replies.ts';
-import {
-  getReasoningDurationMs,
-  getStreamingDurationMs,
-  REASONING_WORD_STAGGER_MS,
-  STREAM_LEAD_IN_MS,
-  STREAM_TAIL_BUFFER_MS,
-  STREAM_WORD_DURATION_MS,
-  STREAM_WORD_STAGGER_MS,
-  tokenizeStreamingText,
-} from './streaming-timing.ts';
 
 const greeting = "Hi. I'm OpenCore. Send a message to start talking.";
 
@@ -130,49 +119,6 @@ test('normalizes composer drafts or returns null when blank', () => {
   assert.equal(normalizeComposerDraft(' \n '), null);
 });
 
-test('cycles dummy replies from short to long', () => {
-  assert.equal(DUMMY_REPLIES.length, 3);
-  assert.equal(pickDummyReply(0), DUMMY_REPLIES[0]);
-  assert.equal(pickDummyReply(2), DUMMY_REPLIES[2]);
-  assert.equal(pickDummyReply(3), DUMMY_REPLIES[0]);
-
-  const wordCounts = DUMMY_REPLIES.map(({ answer }) =>
-    countMarkdownWords(parseMarkdown(answer, { streaming: true })),
-  );
-  assert.ok(wordCounts[0] < wordCounts[1]);
-  assert.ok(wordCounts[1] < wordCounts[2]);
-  assert.ok(DUMMY_REPLIES.every(({ reasoning }) => reasoning.trim().length > 0));
-});
-
-test('tokenizes words and preserves whitespace for layout', () => {
-  const tokens = tokenizeStreamingText('Hai  dunia\nbaru');
-  assert.deepEqual(
-    tokens.map(({ text }) => text),
-    ['Hai', '  ', 'dunia', '\n', 'baru'],
-  );
-  assert.deepEqual(
-    tokens.filter(({ wordIndex }) => wordIndex >= 0).map(({ wordIndex }) => wordIndex),
-    [0, 1, 2],
-  );
-});
-
-test('stream duration covers lead-in, stagger, fade, and tail buffer', () => {
-  assert.equal(
-    getStreamingDurationMs('satu dua tiga'),
-    STREAM_LEAD_IN_MS + 3 * STREAM_WORD_STAGGER_MS + STREAM_WORD_DURATION_MS + STREAM_TAIL_BUFFER_MS,
-  );
-});
-
-test('reasoning duration uses its faster stagger', () => {
-  assert.equal(
-    getReasoningDurationMs('satu dua tiga'),
-    STREAM_LEAD_IN_MS +
-      3 * REASONING_WORD_STAGGER_MS +
-      STREAM_WORD_DURATION_MS +
-      STREAM_TAIL_BUFFER_MS,
-  );
-});
-
 test('deltas append without replacing unaffected messages', () => {
   const start = [
     createChatMessage('user', 'hi'),
@@ -237,4 +183,23 @@ test('a failed reply stops streaming and carries a code', () => {
     message: 'slow down',
     retryable: true,
   });
+});
+
+test('a stream event drives reasoning, answer, and terminal state', () => {
+  const start = [createChatMessage('assistant', '', { streaming: true })];
+  const id = start[0].id;
+  const reasoning = applyStreamEvent(start, id, { type: 'reasoning-delta', text: 'hm' });
+  assert.equal(reasoning[0].reasoning, 'hm');
+  assert.equal(reasoning[0].reasoningStreaming, true);
+  const answer = applyStreamEvent(reasoning, id, { type: 'text-delta', text: 'Hi' }, 2);
+  assert.equal(answer[0].text, 'Hi');
+  assert.equal(answer[0].reasoningStreaming, false);
+  assert.equal(answer[0].reasoningDuration, 2);
+  const failed = applyStreamEvent(answer, id, {
+    type: 'error', code: 'rate-limit', message: 'slow down', retryable: true,
+  });
+  assert.equal(failed[0].streaming, false);
+  assert.equal(failed[0].error.code, 'rate-limit');
+  const done = applyStreamEvent(answer, id, { type: 'done', finishReason: 'stop' });
+  assert.equal(done[0].streaming, false);
 });
