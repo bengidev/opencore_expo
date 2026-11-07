@@ -30,7 +30,25 @@ export function subscribeModelSelection(listener: () => void): () => void {
 }
 
 function emit(): void {
-  for (const listener of listeners) listener();
+  // Iterate a snapshot: a listener that unsubscribes (or subscribes) mid-emit
+  // must not change which listeners this pass reaches, and a throwing listener
+  // is reported on its own turn instead of starving the ones after it.
+  for (const listener of [...listeners]) {
+    try {
+      listener();
+    } catch (error) {
+      queueMicrotask(() => {
+        throw error;
+      });
+    }
+  }
+}
+
+/** Trimmed model id, or `null` when the value is not a usable id. */
+function normalizeModelId(modelId: string): string | null {
+  if (typeof modelId !== 'string') return null;
+  const trimmed = modelId.trim();
+  return trimmed ? trimmed : null;
 }
 
 /**
@@ -38,8 +56,7 @@ function emit(): void {
  * caller that knows the model's levels, so this store stays catalogue-free.
  */
 export function selectModelId(modelId: string): void {
-  if (typeof modelId !== 'string') return;
-  const nextId = modelId.trim();
+  const nextId = normalizeModelId(modelId);
   if (!nextId || nextId === selection.modelId) return;
   selection = { ...selection, modelId: nextId };
   emit();
@@ -47,10 +64,11 @@ export function selectModelId(modelId: string): void {
 
 /** Remembers a thinking level per model, so switching models keeps each one's. */
 export function selectThinkingLevel(modelId: string, level: ThinkingLevel): void {
-  if (!modelId || selection.thinkingByModel[modelId] === level) return;
+  const nextId = normalizeModelId(modelId);
+  if (!nextId || selection.thinkingByModel[nextId] === level) return;
   selection = {
     ...selection,
-    thinkingByModel: { ...selection.thinkingByModel, [modelId]: level },
+    thinkingByModel: { ...selection.thinkingByModel, [nextId]: level },
   };
   emit();
 }
