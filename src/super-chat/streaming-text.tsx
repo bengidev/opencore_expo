@@ -41,7 +41,7 @@ export function StreamingText({ text, animate = true, style }: StreamingTextProp
       accessibilityRole="text"
       style={styles.container}>
       {lines.map((line, lineIndex) => (
-        <View key={`${lineIndex}-${line}`} style={styles.line}>
+        <View key={lineIndex} style={styles.line}>
           {(() => {
             const tokens = tokenizeStreamingText(line);
             return tokens.map((token, tokenIndex) => {
@@ -50,7 +50,7 @@ export function StreamingText({ text, animate = true, style }: StreamingTextProp
               const next = tokens[tokenIndex + 1];
               return (
                 <StreamingWord
-                  key={`${tokenIndex}-${token.text}`}
+                  key={tokenIndex}
                   text={token.text}
                   trailing={next && next.wordIndex < 0 ? next.text : ''}
                   animate={animate}

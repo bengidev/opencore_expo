@@ -1,7 +1,7 @@
 import { router, type Href } from 'expo-router';
 import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import Animated, { Keyframe, ReduceMotion } from 'react-native-reanimated';
+import Animated, { Keyframe, ReduceMotion, useReducedMotion } from 'react-native-reanimated';
 import { Shimmer } from 'panelui-native/components/shimmer';
 
 import { ThemedText } from '@/components/themed-text';
@@ -62,6 +62,7 @@ type MessageBubbleProps = {
 
 export const MessageBubble = memo(function MessageBubble({ message, onRetry }: MessageBubbleProps) {
   const theme = useTheme();
+  const reducedMotion = useReducedMotion();
   const isUser = message.role === 'user';
   const entering = isUser ? userBubbleEntering : assistantBubbleEntering;
   const showReasoning = message.role === 'assistant' && message.reasoning.length > 0;
@@ -103,7 +104,10 @@ export const MessageBubble = memo(function MessageBubble({ message, onRetry }: M
               {message.text}
             </ThemedText>
           ) : (
-            <StreamingMarkdown text={message.text} animate={message.streaming} />
+            <StreamingMarkdown
+              text={message.text}
+              animate={message.streaming && !reducedMotion}
+            />
           )}
         </View>
       ) : null}

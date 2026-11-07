@@ -131,9 +131,8 @@ function renderBlock(
     }
 
     case 'code': {
-      // The code text dissolves line by line, but the chrome is a static View.
-      // Without this it paints its background, border and language label on the
-      // first frame, so the empty block appears ahead of the prose before it.
+      // The chrome fades in with its first word, like every other block, so the
+      // empty block never appears ahead of the prose before it.
       const lines = block.code.split('\n');
 
       return (
@@ -294,11 +293,9 @@ function buildFlowTokens(inlines: MarkdownInline[], theme: Theme): FlowToken[] {
 function StreamingChrome({
   animate,
   style,
-  children,
 }: {
   animate: boolean;
   style?: StyleProp<ViewStyle>;
-  children?: ReactNode;
 }) {
   const opacity = useSharedValue(animate ? 0 : 1);
 
@@ -316,11 +313,7 @@ function StreamingChrome({
 
   const animatedStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
 
-  return (
-    <Animated.View pointerEvents="none" style={[style, animatedStyle]}>
-      {children}
-    </Animated.View>
-  );
+  return <Animated.View pointerEvents="none" style={[style, animatedStyle]} />;
 }
 
 function inlineStyle(segment: MarkdownInline, theme: Theme): StyleProp<TextStyle> {
