@@ -30,11 +30,22 @@ test('override wins, then bundled, then missing', async () => {
     source: 'default',
   });
   assert.deepEqual(await resolveKey(storageWith(''), ''), { key: null, source: 'missing' });
+  assert.deepEqual(await resolveKey(storageWith('   '), 'sk-or-bundled'), {
+    key: 'sk-or-bundled',
+    source: 'default',
+  });
+  assert.deepEqual(await resolveKey(storageWith('""'), 'sk-or-bundled'), {
+    key: 'sk-or-bundled',
+    source: 'default',
+  });
 });
 
 test('a failing storage read degrades to the bundled key', async () => {
   const storage = { read: async () => { throw new Error('keychain'); }, write: async () => {}, remove: async () => {} };
-  assert.equal((await resolveKey(storage, 'sk-or-bundled')).source, 'default');
+  assert.deepEqual(await resolveKey(storage, 'sk-or-bundled'), {
+    key: 'sk-or-bundled',
+    source: 'default',
+  });
 });
 
 test('masks all but the last four characters', () => {
