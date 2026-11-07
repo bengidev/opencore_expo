@@ -2,7 +2,7 @@ import type { ChatMessage } from './chat-message.ts';
 import type { ChatTurn } from './llm/types.ts';
 
 /** How much conversation a single request carries by default. */
-export const CHAT_HISTORY_LIMIT = 20;
+const CHAT_HISTORY_LIMIT = 20;
 
 function isRequestTurn(message: ChatMessage): boolean {
   // The greeting and any other conversation-local note never leave the device.
@@ -16,8 +16,7 @@ function isRequestTurn(message: ChatMessage): boolean {
 /**
  * The provider-facing history for the next request: conversation-local
  * messages dropped, empty assistant turns dropped, the newest `limit` turns
- * kept, and no leading assistant turn (providers reject a conversation that
- * does not start with a user message).
+ * kept, and no leading assistant turn. A leading `system` turn is allowed.
  */
 export function toChatTurns(messages: ChatMessage[], limit = CHAT_HISTORY_LIMIT): ChatTurn[] {
   if (limit <= 0) return [];

@@ -5,13 +5,8 @@ export type DeltaValue = { text: string; reasoning: string };
 export type DeltaFlush = (value: DeltaValue) => void;
 
 export type DeltaBuffer = {
-  /** Answer text pushed since the last flush. */
-  readonly text: string;
-  /** Reasoning text pushed since the last flush. */
-  readonly reasoning: string;
   push(field: DeltaField, chunk: string): void;
   flush(): void;
-  pending(): boolean;
   dispose(): void;
 };
 
@@ -63,21 +58,13 @@ export function createDeltaBuffer(flush: DeltaFlush, flushMs = DEFAULT_FLUSH_MS)
   }
 
   return {
-    get text() {
-      return text;
-    },
-    get reasoning() {
-      return reasoning;
-    },
     push(field, chunk) {
+      if (chunk === '') return;
       if (field === 'reasoning') reasoning += chunk;
       else text += chunk;
       arm();
     },
     flush: emit,
-    pending() {
-      return text !== '' || reasoning !== '';
-    },
     dispose: clearTimer,
   };
 }

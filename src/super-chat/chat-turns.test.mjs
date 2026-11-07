@@ -27,13 +27,26 @@ test('drops local and empty assistant turns but keeps a partial reply', () => {
   ]);
 });
 
-test('caps history and never starts on an assistant turn', () => {
+test('caps history after filtering and never starts on an assistant turn', () => {
   const messages = [];
   for (let index = 0; index < 40; index += 1) {
     messages.push(createChatMessage(index % 2 === 0 ? 'user' : 'assistant', `m${index}`));
   }
+  messages.push(createChatMessage('assistant', ''));
+  messages.push(createChatMessage('assistant', 'local note', { localOnly: true }));
   const turns = toChatTurns(messages, 20);
   assert.equal(turns.length, 20);
-  assert.equal(turns[0].role, 'user');
+  assert.equal(turns[0].content, 'm20');
   assert.equal(turns.at(-1).content, 'm39');
+});
+
+test('drops a leading assistant turn when the window starts on one', () => {
+  const messages = [];
+  for (let index = 0; index < 41; index += 1) {
+    messages.push(createChatMessage(index % 2 === 0 ? 'user' : 'assistant', `m${index}`));
+  }
+  const turns = toChatTurns(messages, 20);
+  assert.equal(turns.length, 19);
+  assert.equal(turns[0].role, 'user');
+  assert.equal(turns[0].content, 'm22');
 });
