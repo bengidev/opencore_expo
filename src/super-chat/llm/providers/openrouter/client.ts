@@ -42,6 +42,14 @@ async function readErrorBody(response: Response): Promise<unknown> {
   }
 }
 
+async function discardBody(response: Response): Promise<void> {
+  try {
+    await response.body?.cancel();
+  } catch {
+    // Best effort: a body that is already consumed or locked cannot be cancelled.
+  }
+}
+
 async function readKeyLabel(response: Response): Promise<string | null> {
   try {
     const payload: unknown = await response.json();
@@ -63,7 +71,7 @@ export async function* streamOpenRouterChat(
   context: ProviderContext,
 ): AsyncGenerator<ChatStreamEvent> {
   const apiKey = context.apiKey;
-  if (apiKey === null || apiKey.length === 0) {
+  if (!apiKey) {
     yield { type: 'error', code: 'missing-key', message: MISSING_KEY_MESSAGE, retryable: false };
     return;
   }
@@ -86,7 +94,9 @@ export async function* streamOpenRouterChat(
   }
 
   if (!response.ok) {
-    yield errorFromResponse(response.status, await readErrorBody(response));
+    const body = await readErrorBody(response);
+    await discardBody(response);
+    yield errorFromResponse(response.status, body);
     return;
   }
 
@@ -96,14 +106,32 @@ export async function* streamOpenRouterChat(
   }
 
   const parser = createChatChunkParser();
+  const events = readSseData(response.body);
+  let terminal = false;
+
   try {
-    for await (const payload of readSseData(response.body)) {
-      for (const event of parser.push(payload)) yield event;
+    for (;;) {
+      let step: IteratorResult<string>;
+      try {
+        step = await events.next();
+      } catch {
+        // Only the reader can fail here; an error thrown in by the consumer at a
+        // `yield` propagates instead of being reported as a network event.
+        if (context.signal?.aborted === true) return;
+        if (terminal) return;
+        yield { type: 'error', code: 'network', message: NETWORK_MESSAGE, retryable: true };
+        return;
+      }
+
+      if (step.done === true) break;
+
+      for (const event of parser.push(step.value)) {
+        yield event;
+        if (event.type === 'done' || event.type === 'error') terminal = true;
+      }
     }
-  } catch {
-    if (context.signal?.aborted === true) return;
-    yield { type: 'error', code: 'network', message: NETWORK_MESSAGE, retryable: true };
-    return;
+  } finally {
+    await events.return(undefined).catch(() => {});
   }
 
   if (context.signal?.aborted === true) return;
@@ -119,7 +147,10 @@ export async function listOpenRouterModels(
 ): Promise<ProviderModel[]> {
   try {
     const response = await context.fetch(`${API_BASE_URL}/models`);
-    if (!response.ok) return openRouterFallbackModels();
+    if (!response.ok) {
+      await discardBody(response);
+      return openRouterFallbackModels();
+    }
 
     const payload: unknown = await response.json();
     const models = toFreeProviderModels(payload);
@@ -145,6 +176,7 @@ export async function checkOpenRouterKey(
     if (response.status === 200) {
       return { state: 'valid', label: await readKeyLabel(response) };
     }
+    await discardBody(response);
     if (response.status === 401 || response.status === 403) {
       return { state: 'invalid', message: INVALID_KEY_MESSAGE };
     }

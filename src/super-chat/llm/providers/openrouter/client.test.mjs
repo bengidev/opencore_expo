@@ -12,6 +12,22 @@ function sseResponse(frames, status = 200) {
   return new Response(body, { status, headers: { 'content-type': 'text/event-stream' } });
 }
 
+const encoder = new TextEncoder();
+
+function sseBody(frames, { errorAfter = false } = {}) {
+  let index = 0;
+  return new ReadableStream({
+    pull(controller) {
+      if (index < frames.length) {
+        controller.enqueue(encoder.encode(`data: ${frames[index]}\n\n`));
+        index += 1;
+        return;
+      }
+      if (errorAfter) controller.error(new Error('stream broke'));
+    },
+  });
+}
+
 const request = { modelId: 'openrouter/free', messages: [{ role: 'user', content: 'hi' }], thinking: null };
 
 async function collect(gen) {
@@ -34,11 +50,38 @@ test('streams reasoning, text, then done', async () => {
   assert.deepEqual(events.map((event) => event.type), ['reasoning-delta', 'text-delta', 'done']);
 });
 
+test('posts the request with auth, content type, model, and signal', async () => {
+  let seen = null;
+  const controller = new AbortController();
+  const fakeFetch = async (input, init) => {
+    seen = { input, init };
+    return sseResponse(['[DONE]']);
+  };
+
+  const events = await collect(
+    streamOpenRouterChat(request, {
+      apiKey: 'sk-or-test',
+      fetch: fakeFetch,
+      signal: controller.signal,
+    }),
+  );
+  assert.equal(events.length, 1);
+
+  assert.equal(seen.input, 'https://openrouter.ai/api/v1/chat/completions');
+  assert.equal(seen.init.method, 'POST');
+  const headers = new Headers(seen.init.headers);
+  assert.equal(headers.get('authorization'), 'Bearer sk-or-test');
+  assert.equal(headers.get('content-type'), 'application/json');
+  assert.equal(JSON.parse(seen.init.body).model, 'openrouter/free');
+  assert.equal(seen.init.signal, controller.signal);
+});
+
 test('missing key fails before touching the network', async () => {
   let calls = 0;
   const fakeFetch = async () => { calls += 1; return sseResponse(['[DONE]']); };
   const events = await collect(streamOpenRouterChat(request, { apiKey: null, fetch: fakeFetch }));
   assert.equal(calls, 0);
+  assert.equal(events.length, 1);
   assert.equal(events[0].code, 'missing-key');
   assert.equal(events[0].retryable, false);
 });
@@ -51,10 +94,55 @@ test('a 429 response becomes a rate-limit event', async () => {
   assert.equal(events[0].code, 'rate-limit');
 });
 
-test('a failed catalogue fetch falls back to the callable row', async () => {
-  const fakeFetch = async () => { throw new Error('offline'); };
-  const models = await listOpenRouterModels({ fetch: fakeFetch });
-  assert.deepEqual(models.map((model) => model.id), ['openrouter/free']);
+test('a read error after a terminal event does not emit a second terminal', async () => {
+  const fakeFetch = async () => new Response(sseBody(['[DONE]'], { errorAfter: true }), { status: 200 });
+  const events = await collect(streamOpenRouterChat(request, { apiKey: 'sk-or-test', fetch: fakeFetch }));
+  assert.deepEqual(events.map((event) => event.type), ['done']);
+});
+
+test('a read error after a chunk error does not emit a second error', async () => {
+  const fakeFetch = async () =>
+    new Response(sseBody(['{"error":{"message":"nope","code":500}}'], { errorAfter: true }), { status: 200 });
+  const events = await collect(streamOpenRouterChat(request, { apiKey: 'sk-or-test', fetch: fakeFetch }));
+  assert.equal(events.length, 1);
+  assert.equal(events[0].type, 'error');
+});
+
+test('an error thrown in by the consumer propagates instead of becoming a network event', async () => {
+  let controllerRef = null;
+  const fakeFetch = async () =>
+    new Response(
+      new ReadableStream({
+        start(controller) {
+          controllerRef = controller;
+          controller.enqueue(encoder.encode('data: {"choices":[{"delta":{"content":"Hi"}}]}\n\n'));
+        },
+      }),
+      { status: 200 },
+    );
+
+  const gen = streamOpenRouterChat(request, { apiKey: 'sk-or-test', fetch: fakeFetch });
+  const first = await gen.next();
+  assert.equal(first.value.type, 'text-delta');
+
+  await assert.rejects(gen.throw(new Error('consumer boom')), /consumer boom/);
+  assert.notEqual(controllerRef, null);
+});
+
+test('a failed catalogue fetch falls back to the callable row', async (t) => {
+  const cases = [
+    ['a throw', async () => { throw new Error('offline'); }],
+    ['a non-ok status', async () => new Response('{}', { status: 500 })],
+    ['malformed JSON', async () => new Response('not json', { status: 200 })],
+    ['an empty catalogue', async () => new Response(JSON.stringify({ data: [] }), { status: 200 })],
+  ];
+
+  for (const [name, fakeFetch] of cases) {
+    await t.test(name, async () => {
+      const models = await listOpenRouterModels({ fetch: fakeFetch });
+      assert.deepEqual(models.map((model) => model.id), ['openrouter/free']);
+    });
+  }
 });
 
 test('checkKey reports invalid and valid', async () => {

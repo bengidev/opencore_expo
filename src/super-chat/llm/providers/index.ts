@@ -12,5 +12,7 @@ export const providers: Record<ProviderId, ChatProvider> = {
  * build does not know (for example one persisted by a newer version).
  */
 export function getProvider(id: ProviderId): ChatProvider {
-  return providers[id] ?? providers[DEFAULT_PROVIDER_ID];
+  return Object.hasOwn(providers, id)
+    ? providers[id]
+    : providers[DEFAULT_PROVIDER_ID];
 }
