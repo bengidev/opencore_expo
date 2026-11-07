@@ -9,22 +9,15 @@ import Animated, {
   Easing,
   useAnimatedStyle,
   useSharedValue,
-  withDelay,
   withTiming,
 } from 'react-native-reanimated';
 
-import {
-  STREAM_LEAD_IN_MS,
-  STREAM_WORD_DURATION_MS,
-  STREAM_WORD_STAGGER_MS,
-  tokenizeStreamingText,
-} from '@/super-chat/streaming-timing';
+import { STREAM_REVEAL_MS, tokenizeStreamingText } from '@/super-chat/streaming-timing';
 
 const EASE_SMOOTH_OUT = Easing.bezier(0.23, 1, 0.32, 1);
 
 type StreamingTextProps = {
   text: string;
-  staggerMs?: number;
   animate?: boolean;
   /** Applied to every word, since each one is its own Text view. */
   style?: StyleProp<TextStyle>;
@@ -38,12 +31,7 @@ type StreamingTextProps = {
  * top-level `Text` gives each one a real view on both platforms. Each word
  * carries its own trailing whitespace, so punctuation stays attached.
  */
-export function StreamingText({
-  text,
-  staggerMs = STREAM_WORD_STAGGER_MS,
-  animate = true,
-  style,
-}: StreamingTextProps) {
+export function StreamingText({ text, animate = true, style }: StreamingTextProps) {
   const lines = useMemo(() => text.split('\n'), [text]);
 
   return (
@@ -65,8 +53,6 @@ export function StreamingText({
                   key={`${tokenIndex}-${token.text}`}
                   text={token.text}
                   trailing={next && next.wordIndex < 0 ? next.text : ''}
-                  wordIndex={token.wordIndex}
-                  staggerMs={staggerMs}
                   animate={animate}
                   style={style}
                 />
@@ -83,45 +69,41 @@ export type StreamingWordProps = {
   text: string;
   /** Whitespace that followed this word in the source, kept inside the view so punctuation stays attached. */
   trailing?: string;
-  wordIndex: number;
-  staggerMs?: number;
   animate?: boolean;
   style?: StyleProp<TextStyle>;
   onPress?: () => void;
 };
 
 /**
- * One animated word. This is a sibling of other words rather than a child of a
- * parent `Text`, which is what makes the opacity work on Android.
+ * One word that dissolves in over `STREAM_REVEAL_MS` from the moment it mounts.
+ * A word is only known once it arrives, so mount is the only honest clock:
+ * there is no schedule to delay against. This is a sibling of other words
+ * rather than a child of a parent `Text`, which is what makes the opacity work
+ * on Android.
  */
 export function StreamingWord({
   text,
   trailing = '',
-  wordIndex,
-  staggerMs = STREAM_WORD_STAGGER_MS,
   animate = true,
   style,
   onPress,
 }: StreamingWordProps) {
-  const progress = useSharedValue(animate ? 0 : 1);
+  const opacity = useSharedValue(animate ? 0 : 1);
 
   useEffect(() => {
     if (!animate) {
-      progress.value = 1;
+      opacity.value = 1;
       return;
     }
 
-    progress.value = withDelay(
-      STREAM_LEAD_IN_MS + wordIndex * staggerMs,
-      withTiming(1, {
-        duration: STREAM_WORD_DURATION_MS,
-        easing: EASE_SMOOTH_OUT,
-      }),
-    );
-  }, [animate, progress, staggerMs, wordIndex]);
+    opacity.value = withTiming(1, {
+      duration: STREAM_REVEAL_MS,
+      easing: EASE_SMOOTH_OUT,
+    });
+  }, [animate, opacity]);
 
   const animatedStyle = useAnimatedStyle(() => ({
-    opacity: progress.value,
+    opacity: opacity.value,
   }));
 
   return (

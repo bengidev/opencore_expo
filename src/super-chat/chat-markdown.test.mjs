@@ -1,17 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  countMarkdownWords,
-  getMarkdownStreamingDurationMs,
-  isAllowedLink,
-  parseMarkdown,
-} from './chat-markdown.ts';
-import {
-  STREAM_LEAD_IN_MS,
-  STREAM_TAIL_BUFFER_MS,
-  STREAM_WORD_DURATION_MS,
-  STREAM_WORD_STAGGER_MS,
-} from './streaming-timing.ts';
+import { countMarkdownWords, isAllowedLink, parseMarkdown } from './chat-markdown.ts';
 
 test('parses headings, paragraphs, and inline runs', () => {
   const blocks = parseMarkdown('## Arah\n\nMulai dari **hal** kecil dan *pelan-pelan*.');
@@ -103,13 +92,6 @@ test('counts words without counting Markdown punctuation', () => {
     '## Arah\n\n**dua** kata `tiga`\n\n1. satu\n2. dua\n\n```ts\nconst x = 1;\n```',
   );
   assert.equal(countMarkdownWords(blocks), 10);
-});
-
-test('stream duration follows the parsed word count', () => {
-  assert.equal(
-    getMarkdownStreamingDurationMs('satu dua tiga'),
-    STREAM_LEAD_IN_MS + 3 * STREAM_WORD_STAGGER_MS + STREAM_WORD_DURATION_MS + STREAM_TAIL_BUFFER_MS,
-  );
 });
 
 test('only safe link schemes are pressable', () => {

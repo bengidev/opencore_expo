@@ -12,8 +12,6 @@
  * dependency-free and JSX-free lets the node test suite exercise it directly.
  */
 
-import { getWordScheduleMs, STREAM_WORD_STAGGER_MS } from './streaming-timing.ts';
-
 export type MarkdownInline = {
   text: string;
   bold?: boolean;
@@ -310,12 +308,6 @@ function sameStyle(a: MarkdownInline, b: MarkdownInline): boolean {
     Boolean(a.strike) === Boolean(b.strike) &&
     (a.href ?? '') === (b.href ?? '')
   );
-}
-
-/** Duration of the per-word dissolve for a parsed answer. */
-export function getMarkdownStreamingDurationMs(text: string): number {
-  const blocks = parseMarkdown(text, { streaming: true });
-  return getWordScheduleMs(countMarkdownWords(blocks), STREAM_WORD_STAGGER_MS);
 }
 
 export function isAllowedLink(href: string): boolean {

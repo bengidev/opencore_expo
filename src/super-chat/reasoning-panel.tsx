@@ -7,7 +7,6 @@ import { ThemedText } from '@/components/themed-text';
 import { Fonts, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { StreamingText } from '@/super-chat/streaming-text';
-import { REASONING_WORD_STAGGER_MS } from '@/super-chat/streaming-timing';
 
 type ReasoningPanelProps = {
   text: string;
@@ -89,7 +88,6 @@ export function ReasoningPanel({ text, streaming, duration }: ReasoningPanelProp
           <View style={styles.trace}>
             <StreamingText
               text={text}
-              staggerMs={REASONING_WORD_STAGGER_MS}
               animate={streaming}
               style={[styles.traceText, { color: theme.textSecondary }]}
             />

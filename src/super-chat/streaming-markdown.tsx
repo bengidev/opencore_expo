@@ -11,7 +11,6 @@ import Animated, {
   Easing,
   useAnimatedStyle,
   useSharedValue,
-  withDelay,
   withTiming,
 } from 'react-native-reanimated';
 
@@ -24,19 +23,11 @@ import {
   type MarkdownInline,
 } from '@/super-chat/chat-markdown';
 import { StreamingWord } from '@/super-chat/streaming-text';
-import {
-  STREAM_LEAD_IN_MS,
-  STREAM_WORD_DURATION_MS,
-  STREAM_WORD_STAGGER_MS,
-  countStreamingWords,
-  tokenizeStreamingText,
-} from '@/super-chat/streaming-timing';
+import { STREAM_REVEAL_MS, tokenizeStreamingText } from '@/super-chat/streaming-timing';
 
 type Theme = ReturnType<typeof useTheme>;
 
 const EASE_SMOOTH_OUT = Easing.bezier(0.23, 1, 0.32, 1);
-
-type WordCursor = { value: number };
 
 /**
  * Renders an assistant answer as Markdown while keeping the per-word dissolve.
@@ -52,11 +43,10 @@ export function StreamingMarkdown({ text, animate = true }: { text: string; anim
     () => parseMarkdown(text, { streaming: animate }),
     [text, animate],
   );
-  const cursor: WordCursor = { value: 0 };
 
   return (
     <View style={styles.blocks}>
-      {blocks.map((block, index) => renderBlock(block, `block-${index}`, cursor, theme, animate))}
+      {blocks.map((block, index) => renderBlock(block, `block-${index}`, theme, animate))}
     </View>
   );
 }
@@ -64,7 +54,6 @@ export function StreamingMarkdown({ text, animate = true }: { text: string; anim
 function renderBlock(
   block: MarkdownBlock,
   key: string,
-  cursor: WordCursor,
   theme: Theme,
   animate: boolean,
 ): ReactNode {
@@ -78,7 +67,6 @@ function renderBlock(
           {renderInlineFlow(
             block.inlines,
             `${key}-inline`,
-            cursor,
             theme,
             animate,
             [headingStyle, { color: theme.text }],
@@ -90,7 +78,7 @@ function renderBlock(
     case 'paragraph':
       return (
         <View key={key}>
-          {renderInlineFlow(block.inlines, `${key}-inline`, cursor, theme, animate, [
+          {renderInlineFlow(block.inlines, `${key}-inline`, theme, animate, [
             styles.paragraph,
             { color: theme.text },
           ])}
@@ -105,8 +93,6 @@ function renderBlock(
               <StreamingWord
                 key={`${key}-marker-${itemIndex}`}
                 text={item.marker}
-                wordIndex={cursor.value}
-                staggerMs={STREAM_WORD_STAGGER_MS}
                 animate={animate}
                 style={[styles.marker, { color: theme.textSecondary }]}
               />
@@ -114,7 +100,6 @@ function renderBlock(
                 {renderInlineFlow(
                   item.inlines,
                   `${key}-item-${itemIndex}`,
-                  cursor,
                   theme,
                   animate,
                   [styles.listText, { color: theme.text }],
@@ -126,12 +111,9 @@ function renderBlock(
       );
 
     case 'quote': {
-      const firstWordIndex = cursor.value;
-
       return (
         <View key={key} style={styles.quote}>
           <StreamingChrome
-            wordIndex={firstWordIndex}
             animate={animate}
             style={[styles.quoteBorder, { backgroundColor: theme.borderVisible }]}
           />
@@ -139,7 +121,6 @@ function renderBlock(
             {renderInlineFlow(
               block.inlines,
               `${key}-inline`,
-              cursor,
               theme,
               animate,
               [styles.quoteText, { color: theme.textSecondary }],
@@ -153,7 +134,6 @@ function renderBlock(
       // The code text dissolves line by line, but the chrome is a static View.
       // Without this it paints its background, border and language label on the
       // first frame, so the empty block appears ahead of the prose before it.
-      const firstWordIndex = cursor.value;
       const lines = block.code.split('\n');
 
       return (
@@ -166,7 +146,6 @@ function renderBlock(
           accessibilityRole="text"
           style={styles.codeBlock}>
           <StreamingChrome
-            wordIndex={firstWordIndex}
             animate={animate}
             style={[
               StyleSheet.absoluteFill,
@@ -177,27 +156,18 @@ function renderBlock(
           {block.language ? (
             <StreamingWord
               text={block.language}
-              wordIndex={firstWordIndex}
-              staggerMs={STREAM_WORD_STAGGER_MS}
               animate={animate}
               style={[styles.codeLanguage, { color: theme.textSecondary }]}
             />
           ) : null}
-          {lines.map((line, lineIndex) => {
-            const lineWordIndex = cursor.value;
-            cursor.value += countStreamingWords(line);
-
-            return (
-              <StreamingWord
-                key={`${key}-line-${lineIndex}`}
-                text={line.length > 0 ? line : ' '}
-                wordIndex={lineWordIndex}
-                staggerMs={STREAM_WORD_STAGGER_MS}
-                animate={animate}
-                style={[styles.codeText, { color: theme.textDisplay }]}
-              />
-            );
-          })}
+          {lines.map((line, lineIndex) => (
+            <StreamingWord
+              key={`${key}-line-${lineIndex}`}
+              text={line.length > 0 ? line : ' '}
+              animate={animate}
+              style={[styles.codeText, { color: theme.textDisplay }]}
+            />
+          ))}
         </View>
       );
     }
@@ -206,7 +176,6 @@ function renderBlock(
       return (
         <StreamingChrome
           key={key}
-          wordIndex={cursor.value}
           animate={animate}
           style={[styles.rule, { backgroundColor: theme.border }]}
         />
@@ -218,7 +187,6 @@ type FlowToken = {
   text: string;
   /** Whitespace from the source, kept inside the word view so punctuation stays attached. */
   trailing: string;
-  words: number;
   style: StyleProp<TextStyle>;
   onPress?: () => void;
 };
@@ -226,13 +194,12 @@ type FlowToken = {
 /**
  * A wrapping row of word views. Inline code and links stay as one view so
  * their background and tap target are continuous; every other segment is split
- * so each word can dissolve on its own delay. Whitespace travels with the
+ * so each word dissolves on its own mount. Whitespace travels with the
  * preceding word, not as a gap, so `**details**,` never renders as `details ,`.
  */
 function renderInlineFlow(
   inlines: MarkdownInline[],
   keyPrefix: string,
-  cursor: WordCursor,
   theme: Theme,
   animate: boolean,
   textStyle: StyleProp<TextStyle>,
@@ -245,23 +212,16 @@ function renderInlineFlow(
       accessibilityLabel={inlines.map((inline) => inline.text).join('')}
       accessibilityRole="text"
       style={styles.flow}>
-      {tokens.map((token, tokenIndex) => {
-        const wordIndex = cursor.value;
-        cursor.value += token.words;
-
-        return (
-          <StreamingWord
-            key={`${keyPrefix}-${tokenIndex}`}
-            text={token.text}
-            trailing={token.trailing}
-            wordIndex={wordIndex}
-            staggerMs={STREAM_WORD_STAGGER_MS}
-            animate={animate}
-            style={[textStyle, token.style]}
-            onPress={token.onPress}
-          />
-        );
-      })}
+      {tokens.map((token, tokenIndex) => (
+        <StreamingWord
+          key={`${keyPrefix}-${tokenIndex}`}
+          text={token.text}
+          trailing={token.trailing}
+          animate={animate}
+          style={[textStyle, token.style]}
+          onPress={token.onPress}
+        />
+      ))}
     </View>
   );
 }
@@ -301,7 +261,6 @@ function buildFlowTokens(inlines: MarkdownInline[], theme: Theme): FlowToken[] {
       tokens.push({
         text,
         trailing,
-        words: countStreamingWords(text),
         style,
         onPress: canPress
           ? () => {
@@ -320,7 +279,6 @@ function buildFlowTokens(inlines: MarkdownInline[], theme: Theme): FlowToken[] {
       tokens.push({
         text: part.text,
         trailing: next && next.wordIndex < 0 ? next.text : '',
-        words: 1,
         style,
       });
     });
@@ -329,35 +287,34 @@ function buildFlowTokens(inlines: MarkdownInline[], theme: Theme): FlowToken[] {
   return tokens;
 }
 
+/**
+ * Chrome around a block (quote border, code surface, rule) fades in on mount
+ * alongside its words, so the empty block never paints ahead of the prose.
+ */
 function StreamingChrome({
-  wordIndex,
   animate,
   style,
   children,
 }: {
-  wordIndex: number;
   animate: boolean;
   style?: StyleProp<ViewStyle>;
   children?: ReactNode;
 }) {
-  const progress = useSharedValue(animate ? 0 : 1);
+  const opacity = useSharedValue(animate ? 0 : 1);
 
   useEffect(() => {
     if (!animate) {
-      progress.value = 1;
+      opacity.value = 1;
       return;
     }
 
-    progress.value = withDelay(
-      STREAM_LEAD_IN_MS + wordIndex * STREAM_WORD_STAGGER_MS,
-      withTiming(1, {
-        duration: STREAM_WORD_DURATION_MS,
-        easing: EASE_SMOOTH_OUT,
-      }),
-    );
-  }, [animate, progress, wordIndex]);
+    opacity.value = withTiming(1, {
+      duration: STREAM_REVEAL_MS,
+      easing: EASE_SMOOTH_OUT,
+    });
+  }, [animate, opacity]);
 
-  const animatedStyle = useAnimatedStyle(() => ({ opacity: progress.value }));
+  const animatedStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
 
   return (
     <Animated.View pointerEvents="none" style={[style, animatedStyle]}>
