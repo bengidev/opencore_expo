@@ -1,8 +1,8 @@
 import Constants from 'expo-constants';
 import * as Haptics from 'expo-haptics';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
-import type { ReactNode } from 'react';
+import { useCallback, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
@@ -12,13 +12,28 @@ import { TabScreen } from '@/components/tab-screen';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { refreshKeyStatus, useKeyStatus } from '@/super-chat/llm/credentials-runtime';
 
 const SOURCE_URL = 'https://github.com/bengidev/opencore_expo';
 
 export function SettingsScreen() {
   const reducedMotion = useReducedMotion();
+  const keyStatus = useKeyStatus();
   const version = Constants.expoConfig?.version ?? '1.0.0';
   const sdkVersion = Constants.expoConfig?.sdkVersion ?? '58';
+
+  // The modal owns the write; re-reading on focus is what updates the masked
+  // value and its source label once the sheet has gone.
+  useFocusEffect(
+    useCallback(() => {
+      void refreshKeyStatus().catch(() => {});
+    }, []),
+  );
+
+  const openKeyEditor = () => {
+    void Haptics.selectionAsync().catch(() => {});
+    router.push('/api-key');
+  };
 
   const openSource = () => {
     void Haptics.selectionAsync().catch(() => {});
@@ -33,6 +48,19 @@ export function SettingsScreen() {
   return (
     <TabScreen eyebrow="OpenCore" title="Settings">
       <View style={styles.sections}>
+        <SettingsSection
+          label="AI provider"
+          footnote="The default key is built into this app and can be extracted from it.">
+          <SettingsRow label="Provider" value="OpenRouter" divider />
+          <SettingsRow
+            label="API key"
+            value={`${keyStatus?.masked ?? 'Not set'} · ${keyStatus?.label ?? 'Missing'}`}
+            onPress={openKeyEditor}
+            divider
+          />
+          <SettingsRow label="Model catalogue" value="Free models" divider={false} />
+        </SettingsSection>
+
         <SettingsSection label="Appearance">
           <SettingsRow label="Theme" value="System" divider />
           <SettingsRow label="Motion" value={reducedMotion ? 'Reduced' : 'Full'} divider={false} />
@@ -58,7 +86,15 @@ export function SettingsScreen() {
   );
 }
 
-function SettingsSection({ label, children }: { label: string; children: ReactNode }) {
+function SettingsSection({
+  label,
+  footnote,
+  children,
+}: {
+  label: string;
+  footnote?: string;
+  children: ReactNode;
+}) {
   return (
     <View style={styles.section}>
       <ThemedText variant="label" themeColor="textSecondary">
@@ -67,6 +103,11 @@ function SettingsSection({ label, children }: { label: string; children: ReactNo
       <NativeSurface tone="glass" radius={Radius.card}>
         {children}
       </NativeSurface>
+      {footnote ? (
+        <ThemedText variant="caption" themeColor="textSecondary" style={styles.footnote}>
+          {footnote}
+        </ThemedText>
+      ) : null}
     </View>
   );
 }
@@ -144,6 +185,9 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: StyleSheet.hairlineWidth,
+  },
+  footnote: {
+    paddingHorizontal: Spacing.three,
   },
   footer: {
     alignItems: 'center',

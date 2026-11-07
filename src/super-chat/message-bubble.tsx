@@ -1,4 +1,4 @@
-import { router, type Href } from 'expo-router';
+import { router } from 'expo-router';
 import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { Keyframe, ReduceMotion, useReducedMotion } from 'react-native-reanimated';
@@ -16,11 +16,8 @@ const ENTER_MS = 200;
 /** Brief pause so the assistant reply reads as a follow-up, not simultaneous with the user send. */
 const ASSISTANT_ENTER_DELAY_MS = 55;
 
-/**
- * The key modal ships with the settings task; the generated typed-route map
- * predates it, so the literal needs a cast until that route exists.
- */
-const API_KEY_ROUTE = '/api-key' as unknown as Href;
+/** The key editor modal; also the destination of the "Open settings" action. */
+const API_KEY_ROUTE = '/api-key';
 
 const KEY_ERRORS: ReadonlySet<ChatErrorCode> = new Set<ChatErrorCode>([
   'missing-key',
