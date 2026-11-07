@@ -18,3 +18,16 @@ export function defaultThinkingLevelFor(levels: readonly ThinkingLevel[]): Think
   if (levels.includes('medium')) return 'medium';
   return levels[Math.floor((levels.length - 1) / 2)] ?? null;
 }
+
+/**
+ * The stored level when the model still offers it, else the model's default.
+ * Guards against a level left behind by a catalogue that has since narrowed a
+ * model's reasoning options.
+ */
+export function clampThinkingLevel(
+  levels: readonly ThinkingLevel[],
+  stored: ThinkingLevel | undefined,
+): ThinkingLevel | null {
+  if (stored !== undefined && levels.includes(stored)) return stored;
+  return defaultThinkingLevelFor(levels);
+}

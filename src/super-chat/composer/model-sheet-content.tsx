@@ -27,7 +27,7 @@ import {
   THINKING_TRIGGER_WIDTH,
 } from '@/super-chat/composer/model-sheet-metrics';
 import { ThinkingLevelControl } from '@/super-chat/composer/model-thinking-control';
-import { defaultThinkingLevelFor } from '@/super-chat/llm/thinking';
+import { clampThinkingLevel } from '@/super-chat/llm/thinking';
 
 type ModelSheetContentProps = {
   models: readonly HomeModel[];
@@ -149,11 +149,10 @@ export function ModelSheetContent({
           <ModelRow
             model={item}
             isSelected={item.id === selectedId}
-            thinkingLevel={
-              item.thinkingLevels.length > 0
-                ? (thinkingByModel[item.id] ?? defaultThinkingLevelFor(item.thinkingLevels))
-                : null
-            }
+            thinkingLevel={clampThinkingLevel(
+              item.thinkingLevels,
+              thinkingByModel[item.id],
+            )}
             activeCapabilityId={
               visibleTooltip?.anchor.modelId === item.id
                 ? visibleTooltip.anchor.capability

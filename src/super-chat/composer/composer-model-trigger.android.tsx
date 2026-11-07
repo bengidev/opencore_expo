@@ -8,19 +8,13 @@ import type { ComposerControlVariant } from '@/super-chat/composer/composer-acti
 import type { HomeModel, HomeModelAndroidIcon } from '@/super-chat/composer/chat-models';
 
 const MODEL_ICONS: Record<HomeModelAndroidIcon, ImageSourcePropType> = {
-  auto_awesome_mosaic: require('@expo/material-symbols/auto_awesome_mosaic.xml'),
-  bolt: require('@expo/material-symbols/bolt.xml'),
-  psychology: require('@expo/material-symbols/psychology.xml'),
-  image_search: require('@expo/material-symbols/image_search.xml'),
-  code: require('@expo/material-symbols/code.xml'),
-  globe: require('@expo/material-symbols/globe.xml'),
-  edit_note: require('@expo/material-symbols/edit_note.xml'),
-  analytics: require('@expo/material-symbols/analytics.xml'),
-  shield: require('@expo/material-symbols/shield.xml'),
   image: require('@expo/material-symbols/image.xml'),
   videocam: require('@expo/material-symbols/videocam.xml'),
   graphic_eq: require('@expo/material-symbols/graphic_eq.xml'),
   description: require('@expo/material-symbols/description.xml'),
+  code: require('@expo/material-symbols/code.xml'),
+  globe: require('@expo/material-symbols/globe.xml'),
+  psychology: require('@expo/material-symbols/psychology.xml'),
   chat: require('@expo/material-symbols/chat.xml'),
 };
 

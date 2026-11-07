@@ -119,21 +119,15 @@ export type HomeModel = {
   keywords: readonly string[];
 };
 
-/** Material Symbols used by the native Android trigger. */
+/** Material Symbols used by the native Android trigger and sheet. */
 export type HomeModelAndroidIcon =
-  | 'auto_awesome_mosaic'
-  | 'bolt'
-  | 'psychology'
-  | 'image_search'
-  | 'code'
-  | 'globe'
-  | 'edit_note'
-  | 'analytics'
-  | 'shield'
   | 'image'
   | 'videocam'
   | 'graphic_eq'
   | 'description'
+  | 'code'
+  | 'globe'
+  | 'psychology'
   | 'chat';
 
 type ModelVisual = {

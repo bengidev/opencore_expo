@@ -36,7 +36,7 @@ import {
   type ModelCapabilityId,
   type ThinkingLevel,
 } from '@/super-chat/composer/chat-models';
-import { defaultThinkingLevelFor } from '@/super-chat/llm/thinking';
+import { clampThinkingLevel } from '@/super-chat/llm/thinking';
 
 type ComposerModelSheetProps = {
   models: readonly HomeModel[];
@@ -49,19 +49,13 @@ type ComposerModelSheetProps = {
 };
 
 const MODEL_ICONS: Record<HomeModelAndroidIcon, ImageSourcePropType> = {
-  auto_awesome_mosaic: require('@expo/material-symbols/auto_awesome_mosaic.xml'),
-  bolt: require('@expo/material-symbols/bolt.xml'),
-  psychology: require('@expo/material-symbols/psychology.xml'),
-  image_search: require('@expo/material-symbols/image_search.xml'),
-  code: require('@expo/material-symbols/code.xml'),
-  globe: require('@expo/material-symbols/globe.xml'),
-  edit_note: require('@expo/material-symbols/edit_note.xml'),
-  analytics: require('@expo/material-symbols/analytics.xml'),
-  shield: require('@expo/material-symbols/shield.xml'),
   image: require('@expo/material-symbols/image.xml'),
   videocam: require('@expo/material-symbols/videocam.xml'),
   graphic_eq: require('@expo/material-symbols/graphic_eq.xml'),
   description: require('@expo/material-symbols/description.xml'),
+  code: require('@expo/material-symbols/code.xml'),
+  globe: require('@expo/material-symbols/globe.xml'),
+  psychology: require('@expo/material-symbols/psychology.xml'),
   chat: require('@expo/material-symbols/chat.xml'),
 };
 
@@ -187,8 +181,10 @@ export function ComposerModelSheet({
               </Text>
               <LazyColumn modifiers={[fillMaxWidth(), weight(1)]}>
                 {visibleModels.map((model) => {
-                  const level =
-                    thinkingByModel[model.id] ?? defaultThinkingLevelFor(model.thinkingLevels);
+                  const level = clampThinkingLevel(
+                    model.thinkingLevels,
+                    thinkingByModel[model.id],
+                  );
                   const isSelected = model.id === selectedId;
 
                   // The key carries the level: Compose's `LazyColumn` reuses rows whose

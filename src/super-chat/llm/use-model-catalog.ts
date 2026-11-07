@@ -5,19 +5,19 @@ import {
   resolveSelectedModel,
   selectModelId,
   selectThinkingLevel,
-} from './model-selection-store';
-import { DEFAULT_PROVIDER_ID, getProvider } from './providers/index';
-import { defaultThinkingLevelFor } from './thinking';
+} from './model-selection-store.ts';
+import { DEFAULT_PROVIDER_ID, getProvider } from './providers/index.ts';
+import { clampThinkingLevel, defaultThinkingLevelFor } from './thinking.ts';
 import type {
   ChatProvider,
   ModelListContext,
   ProviderId,
   ProviderModel,
-} from './types';
-import { useModelSelection } from './use-model-selection';
+} from './types.ts';
+import { useModelSelection } from './use-model-selection.ts';
 
 /** How long a fetched catalogue stays fresh before the next mount refetches it. */
-export const MODEL_CACHE_MS = 10 * 60 * 1000;
+const MODEL_CACHE_MS = 10 * 60 * 1000;
 
 type ModelCatalogStatus = 'loading' | 'ready' | 'fallback';
 
@@ -31,14 +31,34 @@ type CatalogState = {
   error: string | null;
 };
 
+/**
+ * True while a fetched list is still the provider's synthetic fallback row.
+ * Providers report a failed catalogue by returning that row instead of
+ * rejecting, so identity by ids is the only way to tell it apart from a live
+ * list that happens to have the same size.
+ */
+export function isFallbackList(
+  models: readonly ProviderModel[],
+  fallback: readonly ProviderModel[],
+): boolean {
+  if (models.length !== fallback.length) return false;
+  return models.every((model, index) => model.id === fallback[index]?.id);
+}
+
+function isFresh(entry: CachedCatalog): boolean {
+  return Date.now() - entry.at < MODEL_CACHE_MS;
+}
+
+/** Pure: an expired entry is a miss. Pruning happens on write, never in render. */
 function readCache(providerId: ProviderId): ProviderModel[] | null {
   const entry = cache.get(providerId);
-  if (entry === undefined) return null;
-  if (Date.now() - entry.at >= MODEL_CACHE_MS) {
-    cache.delete(providerId);
-    return null;
+  return entry !== undefined && isFresh(entry) ? entry.models : null;
+}
+
+function pruneExpired(): void {
+  for (const [providerId, entry] of cache) {
+    if (!isFresh(entry)) cache.delete(providerId);
   }
-  return entry.models;
 }
 
 function seedState(provider: ChatProvider): CatalogState {
@@ -79,6 +99,8 @@ export function useModelCatalog(provider: ChatProvider = getProvider(DEFAULT_PRO
 
   useEffect(() => {
     let cancelled = false;
+    // Prune here rather than in `readCache`, which also runs during render.
+    pruneExpired();
     // A fresh cache entry is already in state; only fetch when there is none.
     if (readCache(provider.id) !== null) return;
 
@@ -87,13 +109,20 @@ export function useModelCatalog(provider: ChatProvider = getProvider(DEFAULT_PRO
     void provider
       .listModels(context)
       .then((live) => {
-        if (cancelled) return;
-        if (live.length === 0) {
-          setCatalog({ models: [...provider.fallbackModels], status: 'fallback', error: null });
-          return;
+        const usable = live.length > 0 && !isFallbackList(live, provider.fallbackModels);
+        // Never cache a stand-in (the provider's fallback row, or an empty
+        // answer): it would hide the catalogue for ten minutes. Write before
+        // the cancellation check so leaving Home keeps the result.
+        if (usable) {
+          pruneExpired();
+          cache.set(provider.id, { at: Date.now(), models: live });
         }
-        cache.set(provider.id, { at: Date.now(), models: live });
-        setCatalog({ models: live, status: 'ready', error: null });
+        if (cancelled) return;
+        setCatalog(
+          usable
+            ? { models: live, status: 'ready', error: null }
+            : { models: [...provider.fallbackModels], status: 'fallback', error: null },
+        );
       })
       .catch((reason: unknown) => {
         if (cancelled) return;
@@ -110,9 +139,10 @@ export function useModelCatalog(provider: ChatProvider = getProvider(DEFAULT_PRO
   }, [provider, reloadToken]);
 
   // A model stored by an earlier session may be gone from today's catalogue.
-  // Coerce once the live list is in, never while the fallback row is standing in.
+  // Only a live catalogue may coerce it: the fallback row must not overwrite a
+  // selection the user made from the real list.
   useEffect(() => {
-    if (catalog.status === 'loading') return;
+    if (catalog.status !== 'ready') return;
     const selected = resolveSelectedModel(catalog.models, selection.modelId);
     if (selected !== null && selected.id !== selection.modelId) {
       selectModelId(selected.id);
@@ -122,9 +152,10 @@ export function useModelCatalog(provider: ChatProvider = getProvider(DEFAULT_PRO
   const placeholder = useMemo(() => placeholderModel(provider), [provider]);
   const selectedModel = resolveSelectedModel(catalog.models, selection.modelId) ?? placeholder;
 
-  const thinking =
-    selection.thinkingByModel[selectedModel.id] ??
-    defaultThinkingLevelFor(selectedModel.thinkingLevels);
+  const thinking = clampThinkingLevel(
+    selectedModel.thinkingLevels,
+    selection.thinkingByModel[selectedModel.id],
+  );
 
   const selectModel = useCallback((model: ProviderModel) => {
     const { thinkingByModel } = getModelSelection();
