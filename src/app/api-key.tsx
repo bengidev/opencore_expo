@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { AccessibilityInfo, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import Animated, {
   cubicBezier,
   FadeIn,
@@ -22,7 +22,7 @@ import {
   saveOverrideKey,
   useKeyStatus,
 } from '@/super-chat/llm/credentials-runtime';
-import { normalizeKey } from '@/super-chat/llm/credentials';
+import { isValidKeyFormat, normalizeKey } from '@/super-chat/llm/credentials';
 import { openRouterProvider } from '@/super-chat/llm/providers/openrouter';
 import type { KeyStatus } from '@/super-chat/llm/types';
 
@@ -32,8 +32,8 @@ const PRESS_SCALE = 0.97;
 const STATUS_FADE_MS = 150;
 /** Long enough to read the saved-anyway line before the sheet closes. */
 const UNVERIFIED_CLOSE_MS = 900;
-const KEY_PREFIX = 'sk-or-';
-const VERSIONED_KEY_PREFIX = 'sk-or-v1-';
+/** A hung request must not pin the editor on `Checking…`. */
+const CHECK_TIMEOUT_MS = 10_000;
 
 type EditorStatus =
   | { kind: 'idle' }
@@ -41,7 +41,8 @@ type EditorStatus =
   | { kind: 'valid' }
   | { kind: 'invalid'; message: string }
   | { kind: 'unknown' }
-  | { kind: 'saved-unverified' };
+  | { kind: 'saved-unverified' }
+  | { kind: 'storage-error'; message: string };
 
 function statusText(status: EditorStatus): string {
   switch (status.kind) {
@@ -57,6 +58,8 @@ function statusText(status: EditorStatus): string {
       return "Couldn't verify";
     case 'saved-unverified':
       return "Couldn't verify — saved anyway.";
+    case 'storage-error':
+      return status.message;
   }
 }
 
@@ -65,6 +68,7 @@ function statusColor(status: EditorStatus): ThemeColor {
     case 'valid':
       return 'success';
     case 'invalid':
+    case 'storage-error':
       return 'error';
     case 'unknown':
     case 'saved-unverified':
@@ -88,7 +92,13 @@ export default function ApiKeyScreen() {
   const keyStatus = useKeyStatus();
   const [draft, setDraft] = useState('');
   const [status, setStatus] = useState<EditorStatus>({ kind: 'idle' });
+  const [submitting, setSubmitting] = useState(false);
+  const [clearing, setClearing] = useState(false);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const checkTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const checkController = useRef<AbortController | null>(null);
+  const saveInFlight = useRef(false);
+  const clearInFlight = useRef(false);
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -99,10 +109,28 @@ export default function ApiKeyScreen() {
       if (closeTimer.current !== null) {
         clearTimeout(closeTimer.current);
       }
+      if (checkTimer.current !== null) {
+        clearTimeout(checkTimer.current);
+      }
+      checkController.current?.abort();
     };
   }, []);
 
-  const busy = status.kind === 'checking' || status.kind === 'saved-unverified';
+  // VoiceOver and TalkBack only read the status line on Android, and only when
+  // it is a live region; announcing the verdict explicitly covers both.
+  useEffect(() => {
+    if (
+      status.kind === 'invalid' ||
+      status.kind === 'unknown' ||
+      status.kind === 'saved-unverified' ||
+      status.kind === 'storage-error'
+    ) {
+      AccessibilityInfo.announceForAccessibility(statusText(status));
+    }
+  }, [status]);
+
+  const busy =
+    status.kind === 'checking' || status.kind === 'saved-unverified' || submitting || clearing;
   const normalizedDraft = normalizeKey(draft);
   const storedKey = keyStatus?.source === 'override' ? keyStatus.key : null;
   const unchanged = storedKey !== null && normalizedDraft === storedKey;
@@ -116,67 +144,96 @@ export default function ApiKeyScreen() {
   }, []);
 
   const handleSave = useCallback(async () => {
+    // The state update lands a render later, so a second tap in the same frame
+    // would still see `busy === false`; the ref closes that window.
+    if (saveInFlight.current) return;
+
     const value = normalizeKey(draft);
     if (value === null || busy) return;
 
-    if (value.startsWith(KEY_PREFIX) && !value.startsWith(VERSIONED_KEY_PREFIX)) {
-      setStatus({ kind: 'invalid', message: `keys start with ${VERSIONED_KEY_PREFIX}` });
+    if (!isValidKeyFormat(value)) {
+      setStatus({ kind: 'invalid', message: 'keys start with sk-or-v1-' });
       return;
     }
 
+    saveInFlight.current = true;
+    setSubmitting(true);
     setStatus({ kind: 'checking' });
 
-    let check: KeyStatus;
     try {
-      check = await openRouterProvider.checkKey(value, { fetch });
-    } catch {
-      check = { state: 'unknown', message: "Couldn't verify this key." };
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), CHECK_TIMEOUT_MS);
+      checkController.current = controller;
+      checkTimer.current = timeout;
+
+      let check: KeyStatus;
+      try {
+        // The provider maps a failure or an abort to `unknown`, so a hung
+        // request ends as "couldn't verify" rather than a rejection.
+        check = await openRouterProvider.checkKey(value, {
+          fetch: (input, init) => fetch(input, { ...init, signal: controller.signal }),
+        });
+      } finally {
+        clearTimeout(timeout);
+        checkTimer.current = null;
+        checkController.current = null;
+      }
+
+      // The sheet can be swiped away while the check is in flight; a dismissed
+      // editor must not persist its draft or pop another screen.
+      if (!mountedRef.current) return;
+
+      if (check.state === 'invalid') {
+        setStatus({ kind: 'invalid', message: check.message });
+        return;
+      }
+
+      try {
+        await saveOverrideKey(value);
+      } catch {
+        // A keychain write failure is not a bad key: do not frame it as one.
+        setStatus({ kind: 'storage-error', message: "Couldn't save this key." });
+        return;
+      }
+
+      if (!mountedRef.current) return;
+
+      if (check.state === 'valid') {
+        setStatus({ kind: 'valid' });
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+        router.back();
+        return;
+      }
+
+      // One final state for the unverified path: flipping through `unknown` on
+      // the way here remounted the keyed fade twice for no information gain.
+      setStatus({ kind: 'saved-unverified' });
+      closeTimer.current = setTimeout(() => {
+        closeTimer.current = null;
+        router.back();
+      }, UNVERIFIED_CLOSE_MS);
+    } finally {
+      saveInFlight.current = false;
+      setSubmitting(false);
     }
-
-    // The sheet can be swiped away while the check is in flight; a dismissed
-    // editor must not persist its draft or pop another screen.
-    if (!mountedRef.current) return;
-
-    if (check.state === 'invalid') {
-      setStatus({ kind: 'invalid', message: check.message });
-      return;
-    }
-
-    if (check.state === 'unknown') {
-      setStatus({ kind: 'unknown' });
-    }
-
-    try {
-      await saveOverrideKey(value);
-    } catch {
-      setStatus({ kind: 'invalid', message: "Couldn't save this key." });
-      return;
-    }
-
-    if (!mountedRef.current) return;
-
-    if (check.state === 'valid') {
-      setStatus({ kind: 'valid' });
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      router.back();
-      return;
-    }
-
-    setStatus({ kind: 'saved-unverified' });
-    closeTimer.current = setTimeout(() => {
-      closeTimer.current = null;
-      router.back();
-    }, UNVERIFIED_CLOSE_MS);
   }, [busy, draft]);
 
   const handleUseDefault = useCallback(async () => {
-    if (busy) return;
+    if (clearInFlight.current || busy) return;
+
+    clearInFlight.current = true;
+    setClearing(true);
 
     try {
       await clearOverrideKey();
     } catch {
-      setStatus({ kind: 'invalid', message: "Couldn't clear this key." });
+      // Deleting from the keychain can fail too; that is a storage problem,
+      // not an `Invalid:` verdict on a key the user just typed.
+      setStatus({ kind: 'storage-error', message: "Couldn't clear this key." });
       return;
+    } finally {
+      clearInFlight.current = false;
+      setClearing(false);
     }
 
     if (!mountedRef.current) return;
@@ -195,7 +252,7 @@ export default function ApiKeyScreen() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.content}>
             <View style={styles.column}>
-              <ThemedText variant="bodySm" themeColor="textSecondary">
+              <ThemedText variant="body" themeColor="textSecondary">
                 Used for this device only. Stored in the system keychain.
               </ThemedText>
 
@@ -207,17 +264,19 @@ export default function ApiKeyScreen() {
                 <TextInput
                   value={draft}
                   onChangeText={handleChange}
-                  editable={!busy}
+                  editable={!submitting && !clearing}
                   placeholder="sk-or-v1-…"
                   placeholderTextColor={theme.textDisabled}
                   secureTextEntry
                   autoCapitalize="none"
                   autoCorrect={false}
                   textContentType="password"
+                  returnKeyType="done"
+                  onSubmitEditing={canSave ? handleSave : undefined}
                   accessibilityLabel="OpenRouter API key"
                   style={[
                     styles.input,
-                    Typography.bodySm,
+                    Typography.body,
                     { color: theme.text, fontFamily: mono },
                   ]}
                 />
@@ -226,18 +285,23 @@ export default function ApiKeyScreen() {
               <Animated.View
                 key={statusText(status)}
                 entering={reducedMotion ? undefined : FadeIn.duration(STATUS_FADE_MS)}
-                accessibilityLiveRegion="polite"
                 style={styles.status}>
-                <ThemedText variant="bodySm" themeColor={statusColor(status)}>
+                <ThemedText variant="body" themeColor={statusColor(status)}>
                   {statusText(status)}
                 </ThemedText>
               </Animated.View>
 
               <View style={styles.actions}>
-                <PrimaryButton label="Save key" disabled={!canSave} onPress={handleSave} />
+                <ActionButton
+                  label="Save key"
+                  variant="primary"
+                  disabled={!canSave}
+                  onPress={handleSave}
+                />
                 {showDefaultKey ? (
-                  <SecondaryButton
+                  <ActionButton
                     label="Use default key"
+                    variant="secondary"
                     disabled={busy}
                     onPress={handleUseDefault}
                   />
@@ -251,12 +315,14 @@ export default function ApiKeyScreen() {
   );
 }
 
-function PrimaryButton({
+function ActionButton({
   label,
+  variant,
   disabled,
   onPress,
 }: {
   label: string;
+  variant: 'primary' | 'secondary';
   disabled: boolean;
   onPress: () => void;
 }) {
@@ -264,6 +330,7 @@ function PrimaryButton({
   const reducedMotion = useReducedMotion();
   const [pressed, setPressed] = useState(false);
   const isPressed = pressed && !disabled;
+  const primary = variant === 'primary';
 
   return (
     <Pressable
@@ -279,8 +346,10 @@ function PrimaryButton({
       pressRetentionOffset={{ top: 12, left: 12, right: 12, bottom: 12 }}>
       <Animated.View
         style={[
-          styles.primary,
-          { backgroundColor: disabled ? theme.surfaceRaised : theme.textDisplay },
+          styles.action,
+          primary
+            ? { backgroundColor: disabled ? theme.surfaceRaised : theme.textDisplay }
+            : { borderColor: theme.borderVisible },
           reducedMotion
             ? {
                 transitionProperty: 'opacity',
@@ -295,59 +364,9 @@ function PrimaryButton({
                 transform: [{ scale: isPressed ? PRESS_SCALE : 1 }],
               },
         ]}>
-        <ThemedText variant="controlLabel" themeColor={disabled ? 'textDisabled' : 'background'}>
-          {label}
-        </ThemedText>
-      </Animated.View>
-    </Pressable>
-  );
-}
-
-function SecondaryButton({
-  label,
-  disabled,
-  onPress,
-}: {
-  label: string;
-  disabled: boolean;
-  onPress: () => void;
-}) {
-  const theme = useTheme();
-  const reducedMotion = useReducedMotion();
-  const [pressed, setPressed] = useState(false);
-  const isPressed = pressed && !disabled;
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      accessibilityState={{ disabled }}
-      disabled={disabled}
-      onPress={onPress}
-      onPressIn={() => {
-        if (!disabled) setPressed(true);
-      }}
-      onPressOut={() => setPressed(false)}
-      pressRetentionOffset={{ top: 12, left: 12, right: 12, bottom: 12 }}>
-      <Animated.View
-        style={[
-          styles.secondary,
-          { borderColor: theme.borderVisible },
-          reducedMotion
-            ? {
-                transitionProperty: 'opacity',
-                transitionDuration: PRESS_MS,
-                transitionTimingFunction: PRESS_EASE,
-                opacity: isPressed ? 0.65 : 1,
-              }
-            : {
-                transitionProperty: 'transform',
-                transitionDuration: PRESS_MS,
-                transitionTimingFunction: PRESS_EASE,
-                transform: [{ scale: isPressed ? PRESS_SCALE : 1 }],
-              },
-        ]}>
-        <ThemedText variant="controlLabel" themeColor="textSecondary">
+        <ThemedText
+          variant="controlLabel"
+          themeColor={primary ? (disabled ? 'textDisabled' : 'background') : 'textSecondary'}>
           {label}
         </ThemedText>
       </Animated.View>
@@ -385,22 +404,16 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
   },
   status: {
-    minHeight: 21,
+    minHeight: Typography.body.lineHeight,
   },
   actions: {
     gap: Spacing.two,
   },
-  primary: {
-    minHeight: 52,
-    borderRadius: Radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.four,
-  },
-  secondary: {
+  action: {
     minHeight: 52,
     borderRadius: Radius.pill,
     borderWidth: 1,
+    borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.four,

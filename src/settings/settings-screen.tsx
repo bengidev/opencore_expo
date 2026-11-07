@@ -56,6 +56,7 @@ export function SettingsScreen() {
             label="API key"
             value={`${keyStatus?.masked ?? 'Not set'} · ${keyStatus?.label ?? 'Missing'}`}
             onPress={openKeyEditor}
+            accessibilityHint="opens the key editor"
             divider
           />
           <SettingsRow label="Model catalogue" value="Free models" divider={false} />
@@ -116,11 +117,13 @@ function SettingsRow({
   label,
   value,
   onPress,
+  accessibilityHint,
   divider = true,
 }: {
   label: string;
   value?: string;
   onPress?: () => void;
+  accessibilityHint?: string;
   divider?: boolean;
 }) {
   const theme = useTheme();
@@ -148,7 +151,8 @@ function SettingsRow({
       {onPress ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={label}
+          accessibilityLabel={value ? `${label}, ${value}` : label}
+          accessibilityHint={accessibilityHint}
           onPress={onPress}
           style={({ pressed }) => [styles.row, pressed && { opacity: 0.55 }]}>
           {content}

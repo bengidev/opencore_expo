@@ -14,6 +14,8 @@ export type KeySource = 'override' | 'default' | 'missing';
 export type ResolvedKey = { key: string | null; source: KeySource };
 
 const MASK_PREFIX = '•••• ';
+const KEY_PREFIX = 'sk-or-';
+const VERSIONED_KEY_PREFIX = 'sk-or-v1-';
 
 /**
  * Trims whitespace and strips one pair of surrounding double quotes, which is
@@ -31,6 +33,15 @@ export function normalizeKey(raw: string | null | undefined): string | null {
   }
 
   return value.length > 0 ? value : null;
+}
+
+/**
+ * The local shape rule: a value that claims the OpenRouter prefix must carry
+ * the versioned one too. Anything without the prefix is left to the provider,
+ * which is the only authority on what a valid key looks like.
+ */
+export function isValidKeyFormat(value: string): boolean {
+  return !value.startsWith(KEY_PREFIX) || value.startsWith(VERSIONED_KEY_PREFIX);
 }
 
 /**

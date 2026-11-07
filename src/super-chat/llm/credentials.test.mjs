@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { maskKey, normalizeKey, resolveKey } from './credentials.ts';
+import { isValidKeyFormat, maskKey, normalizeKey, resolveKey } from './credentials.ts';
 
 function storageWith(value) {
   return {
@@ -18,6 +18,11 @@ test('normalizes pasted keys', () => {
   assert.equal(normalizeKey(undefined), null);
   assert.equal(normalizeKey("'sk-or-v1-abc'"), "'sk-or-v1-abc'");
   assert.equal(normalizeKey('""'), null);
+});
+
+test('rejects the unversioned OpenRouter prefix', () => {
+  assert.equal(isValidKeyFormat('sk-or-v1-abc'), true);
+  assert.equal(isValidKeyFormat('sk-or-abc'), false);
 });
 
 test('override wins, then bundled, then missing', async () => {

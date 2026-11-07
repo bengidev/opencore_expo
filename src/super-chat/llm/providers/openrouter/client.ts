@@ -19,7 +19,7 @@ const MISSING_KEY_MESSAGE = 'Add an OpenRouter API key in Settings.';
 const NETWORK_MESSAGE = "Couldn't reach OpenRouter.";
 const PROVIDER_MESSAGE = 'OpenRouter could not answer. Try again.';
 const INVALID_KEY_MESSAGE = 'OpenRouter rejected this key.';
-const UNKNOWN_KEY_MESSAGE = "Couldn't verify this key.";
+export const UNKNOWN_KEY_MESSAGE = "Couldn't verify this key.";
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
