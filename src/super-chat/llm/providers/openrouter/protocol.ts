@@ -37,21 +37,31 @@ function readUsage(value: unknown): ChatUsage | null {
   if (raw === null) return null;
   const promptTokens = asNumber(raw.prompt_tokens);
   const completionTokens = asNumber(raw.completion_tokens);
-  const totalTokens = asNumber(raw.total_tokens);
-  if (promptTokens === null || completionTokens === null || totalTokens === null) return null;
-  return { promptTokens, completionTokens, totalTokens };
+  if (promptTokens === null || completionTokens === null) return null;
+  const reportedTotal = asNumber(raw.total_tokens);
+  return {
+    promptTokens,
+    completionTokens,
+    totalTokens: reportedTotal ?? promptTokens + completionTokens,
+  };
 }
 
 function readReasoningText(delta: Record<string, unknown>): string | null {
-  const parts: string[] = [];
   const direct = asString(delta.reasoning);
-  if (direct !== null) parts.push(direct);
+  if (direct !== null && direct.length > 0) return direct;
 
+  const parts: string[] = [];
   for (const entry of asArray(delta.reasoning_details)) {
     const detail = asRecord(entry);
-    if (detail === null || detail.type !== 'reasoning.text') continue;
-    const text = asString(detail.text);
-    if (text !== null) parts.push(text);
+    if (detail === null) continue;
+    const type = asString(detail.type);
+    if (type === 'reasoning.text') {
+      const text = asString(detail.text);
+      if (text !== null) parts.push(text);
+    } else if (type === 'reasoning.summary') {
+      const summary = asString(detail.summary);
+      if (summary !== null) parts.push(summary);
+    }
   }
 
   const text = parts.join('');
@@ -69,12 +79,6 @@ function providerDetail(body: unknown): {
     type: asString(error?.type),
     code: error?.code ?? null,
   };
-}
-
-function numericStatus(code: unknown): number {
-  if (typeof code === 'number' && Number.isFinite(code)) return code;
-  if (typeof code === 'string' && /^\d+$/.test(code.trim())) return Number(code.trim());
-  return 0;
 }
 
 export function buildChatRequest(request: ChatRequest): Record<string, unknown> {
@@ -119,16 +123,14 @@ export function createChatChunkParser(): {
     const chunk = asRecord(parsed);
     if (chunk === null) return [];
 
-    if (chunk.error !== undefined && chunk.error !== null) {
+    const errorObject = asRecord(chunk.error);
+    if (errorObject !== null) {
       terminal = true;
-      const status = numericStatus(providerDetail(chunk).code);
-      return [errorFromResponse(status, chunk)];
+      return [errorFromChunk(errorObject)];
     }
 
     const events: ChatStreamEvent[] = [];
     const choice = asRecord(asArray(chunk.choices)[0]);
-    let finishReason: string | null = null;
-
     if (choice !== null) {
       const delta = asRecord(choice.delta);
       if (delta !== null) {
@@ -141,20 +143,21 @@ export function createChatChunkParser(): {
         }
       }
 
-      finishReason = asString(choice.finish_reason);
-      if (finishReason !== null) lastFinishReason = finishReason;
+      const finishReason = asString(choice.finish_reason);
+      if (finishReason !== null && finishReason.length > 0) {
+        lastFinishReason = finishReason;
+      }
     }
 
     const usage = readUsage(chunk.usage);
     if (usage !== null) lastUsage = usage;
-
-    if (finishReason !== null) events.push(doneEvent());
 
     return events;
   };
 
   const finish = (): ChatStreamEvent[] => {
     if (terminal) return [];
+    if (lastFinishReason !== null) return [doneEvent()];
     terminal = true;
     return [
       { type: 'error', code: 'network', message: NETWORK_EOF_MESSAGE, retryable: true },
@@ -168,28 +171,50 @@ function errorEvent(code: ChatErrorCode, message: string, retryable: boolean): C
   return { type: 'error', code, message, retryable };
 }
 
+/**
+ * Maps a top-level OpenRouter stream error object to the shared error event.
+ *
+ * Unlike `errorFromResponse`, this is not HTTP-status driven: the stream error
+ * carries its own `type`/`code` vocabulary, so those fields are matched exactly
+ * against known prefixes rather than inspecting the human-readable message.
+ */
+export function errorFromChunk(error: unknown): ChatErrorEvent {
+  const detail = asRecord(error);
+  const providerMessage = asString(detail?.message);
+  const message = (fallback: string): string =>
+    providerMessage !== null && providerMessage.length > 0 ? providerMessage : fallback;
+
+  const code = detail?.code;
+  const status = typeof code === 'number' && Number.isFinite(code)
+    ? code
+    : typeof code === 'string' && /^\d+$/.test(code.trim())
+      ? Number(code.trim())
+      : null;
+
+  const type = (asString(detail?.type) ?? '').toLowerCase();
+  const codeText = typeof code === 'string' ? code.toLowerCase() : '';
+  const tokens = [type, codeText].filter((token) => token.length > 0);
+
+  if (status === 401) return errorEvent('invalid-key', message(INVALID_KEY_MESSAGE), false);
+  if (status === 402) return errorEvent('credits', message(CREDITS_MESSAGE), false);
+  if (status === 429) return errorEvent('rate-limit', message(RATE_LIMIT_MESSAGE), true);
+
+  if (tokens.some((token) => token.startsWith('rate_limit') || token === 'rate-limit')) {
+    return errorEvent('rate-limit', message(RATE_LIMIT_MESSAGE), true);
+  }
+  if (tokens.some((token) => token.startsWith('credit') || token === 'insufficient_quota')) {
+    return errorEvent('credits', message(CREDITS_MESSAGE), false);
+  }
+  if (tokens.some((token) => token.startsWith('auth') || token.startsWith('invalid'))) {
+    return errorEvent('invalid-key', message(INVALID_KEY_MESSAGE), false);
+  }
+  return errorEvent('provider', message(PROVIDER_MESSAGE), true);
+}
+
 export function errorFromResponse(status: number, body: unknown): ChatErrorEvent {
   const detail = providerDetail(body);
   const message = (fallback: string): string =>
     detail.message !== null && detail.message.length > 0 ? detail.message : fallback;
-
-  if (!Number.isFinite(status) || status <= 0) {
-    const code = typeof detail.code === 'string' || typeof detail.code === 'number'
-      ? String(detail.code)
-      : '';
-    const hint = `${detail.type ?? ''} ${code} ${detail.message ?? ''}`.toLowerCase();
-
-    if (hint.includes('rate') || hint.includes('429')) {
-      return errorEvent('rate-limit', message(RATE_LIMIT_MESSAGE), true);
-    }
-    if (hint.includes('credit') || hint.includes('402') || hint.includes('insufficient')) {
-      return errorEvent('credits', message(CREDITS_MESSAGE), false);
-    }
-    if (hint.includes('auth') || hint.includes('401') || hint.includes('key') || hint.includes('unauthor')) {
-      return errorEvent('invalid-key', message(INVALID_KEY_MESSAGE), false);
-    }
-    return errorEvent('provider', message(PROVIDER_MESSAGE), true);
-  }
 
   if (status === 401) return errorEvent('invalid-key', message(INVALID_KEY_MESSAGE), false);
   if (status === 402) return errorEvent('credits', message(CREDITS_MESSAGE), false);
