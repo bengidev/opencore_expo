@@ -8,13 +8,7 @@ import type {
   ChatTurn,
   ThinkingLevel,
 } from './llm/types.ts';
-
-/**
- * A request that fails instantly — a missing key, a rejected payload — should
- * not flash a stop control. The running state only appears once the run has
- * outlived a couple of frames.
- */
-const STREAMING_FLIP_MS = 160;
+import { createStreamingFlag } from './streaming-flag.ts';
 
 export type UseChatRequestOptions = {
   provider: ChatProvider;
@@ -54,22 +48,18 @@ export function useChatRequest({
 
   const [isStreaming, setIsStreaming] = useState(false);
   const mountedRef = useRef(true);
-  const flipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const clearFlipTimer = useCallback(() => {
-    if (flipTimerRef.current === null) return;
-    clearTimeout(flipTimerRef.current);
-    flipTimerRef.current = null;
-  }, []);
+  // The flag owns the 160 ms flip and the run token: a superseded run cannot
+  // cancel its successor's timer or turn the flag off under it.
+  const flag = useMemo(() => createStreamingFlag(setIsStreaming), []);
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
-      clearFlipTimer();
+      flag.dispose();
       runner.abort();
     };
-  }, [clearFlipTimer, runner]);
+  }, [flag, runner]);
 
   const start = useCallback(
     async (
@@ -77,29 +67,24 @@ export function useChatRequest({
       turns: ChatTurn[],
       onEvent: (id: string, event: ChatStreamEvent) => void,
     ) => {
-      clearFlipTimer();
-      flipTimerRef.current = setTimeout(() => {
-        flipTimerRef.current = null;
-        if (mountedRef.current) setIsStreaming(true);
-      }, STREAMING_FLIP_MS);
-
+      const token = flag.begin();
       try {
         await runner.run({ modelId, messages: turns, thinking }, (event) => {
+          // A stream that outlives the screen must not write into its state.
+          if (!mountedRef.current) return;
           onEvent(messageId, event);
         });
       } finally {
-        clearFlipTimer();
-        if (mountedRef.current) setIsStreaming(false);
+        flag.end(token);
       }
     },
-    [clearFlipTimer, modelId, runner, thinking],
+    [flag, modelId, runner, thinking],
   );
 
   const abort = useCallback(() => {
-    clearFlipTimer();
     runner.abort();
-    if (mountedRef.current) setIsStreaming(false);
-  }, [clearFlipTimer, runner]);
+    flag.cancel();
+  }, [flag, runner]);
 
   return { start, abort, isStreaming };
 }

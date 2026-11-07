@@ -128,7 +128,11 @@ export const MessageBubble = memo(function MessageBubble({ message, onRetry }: M
 
       {error !== undefined ? (
         <View style={styles.error}>
-          <ThemedText type="small" themeColor="error">
+          <ThemedText
+            type="small"
+            themeColor="error"
+            accessibilityRole="alert"
+            accessibilityLiveRegion="polite">
             {error.message}
           </ThemedText>
           <View style={styles.actions}>
@@ -136,6 +140,7 @@ export const MessageBubble = memo(function MessageBubble({ message, onRetry }: M
               <Pressable
                 accessibilityRole="button"
                 hitSlop={8}
+                style={styles.action}
                 onPress={() => onRetry(message.id)}>
                 <ThemedText type="link" themeColor="interactive">
                   Retry
@@ -144,8 +149,9 @@ export const MessageBubble = memo(function MessageBubble({ message, onRetry }: M
             ) : null}
             {KEY_ERRORS.has(error.code) ? (
               <Pressable
-                accessibilityRole="link"
+                accessibilityRole="button"
                 hitSlop={8}
+                style={styles.action}
                 onPress={() => router.push(API_KEY_ROUTE)}>
                 <ThemedText type="link" themeColor="interactive">
                   Open settings
@@ -187,6 +193,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.three,
+  },
+  // Text-sized links still need the 44 pt touch target the platform expects.
+  action: {
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: 'center',
   },
   user: {
     alignSelf: 'flex-end',

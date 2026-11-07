@@ -203,3 +203,14 @@ test('a stream event drives reasoning, answer, and terminal state', () => {
   const done = applyStreamEvent(answer, id, { type: 'done', finishReason: 'stop' });
   assert.equal(done[0].streaming, false);
 });
+
+test('done ends a reasoning-only reply instead of leaving the trace streaming', () => {
+  const start = [createChatMessage('assistant', '', { streaming: true })];
+  const id = start[0].id;
+  const reasoning = applyStreamEvent(start, id, { type: 'reasoning-delta', text: 'hm' });
+  const done = applyStreamEvent(reasoning, id, { type: 'done', finishReason: 'stop' }, 2);
+  assert.equal(done[0].reasoningStreaming, false);
+  assert.equal(done[0].reasoningDuration, 2);
+  assert.equal(done[0].streaming, false);
+  assert.equal(done[0].text, '');
+});

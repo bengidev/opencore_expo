@@ -157,8 +157,16 @@ export function applyStreamEvent(
       return appendReplyDelta(staged, id, 'text', event.text);
     }
 
-    case 'done':
-      return finishAssistantReply(messages, id);
+    case 'done': {
+      // A reasoning-only reply finishes without ever sending text. Leaving the
+      // trace streaming would shimmer forever and keep the answer hidden, so
+      // the answer transition happens here too.
+      const target = messages.find((message) => message.id === id);
+      const staged = target?.reasoningStreaming
+        ? startAssistantAnswer(messages, id, elapsedSeconds ?? 1)
+        : messages;
+      return finishAssistantReply(staged, id);
+    }
 
     case 'error':
       return failAssistantReply(messages, id, {

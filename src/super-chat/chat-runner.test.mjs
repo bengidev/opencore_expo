@@ -44,8 +44,8 @@ test('a second run aborts the first, which emits nothing further', async () => {
   gates[0].resolve();
   gates[1].resolve();
   await Promise.all([first, second]);
-  assert.deepEqual(events.filter((event) => event.type === 'done').length, 1);
-  assert.deepEqual(events.at(-1).type, 'done');
+  assert.equal(events.filter((event) => event.type === 'done').length, 1);
+  assert.equal(events.at(-1).type, 'done');
 });
 
 test('coalesces deltas and reports a missing key without a request', async () => {
@@ -71,4 +71,68 @@ test('coalesces deltas and reports a missing key without a request', async () =>
   assert.equal(called, 0);
   assert.equal(errors[0].code, 'missing-key');
   assert.equal(errors[0].retryable, false);
+});
+
+test('abort delivers the buffered delta once and emits no terminal event', async () => {
+  const gate = deferred();
+  const provider = providerYielding(async function* () {
+    yield { type: 'text-delta', text: 'partial' };
+    await gate.promise;
+    yield { type: 'done', finishReason: 'stop' };
+  });
+  // Long enough that nothing flushes on its own: the abort must deliver it.
+  const runner = createChatRunner({ provider, getKey: async () => 'sk-or-test', flushMs: 60_000 });
+  const events = [];
+  const run = runner.run(request, (event) => events.push(event));
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(events.length, 0);
+
+  runner.abort();
+  assert.deepEqual(events, [{ type: 'text-delta', text: 'partial' }]);
+
+  gate.resolve();
+  await run;
+  assert.equal(events.length, 1);
+  assert.equal(runner.isRunning(), false);
+});
+
+test('a provider throw keeps the streamed deltas and ends with one retryable error', async () => {
+  const provider = providerYielding(async function* () {
+    yield { type: 'text-delta', text: 'part' };
+    throw new TypeError('fetch exploded');
+  });
+  const runner = createChatRunner({ provider, getKey: async () => 'sk-or-test', flushMs: 5 });
+  const events = [];
+
+  assert.equal(runner.isRunning(), false);
+  const run = runner.run(request, (event) => events.push(event));
+  assert.equal(runner.isRunning(), true);
+  await run;
+  assert.equal(runner.isRunning(), false);
+
+  assert.deepEqual(events[0], { type: 'text-delta', text: 'part' });
+  assert.equal(events.length, 2);
+  assert.equal(events[1].type, 'error');
+  assert.equal(events[1].code, 'network');
+  assert.equal(events[1].message, 'fetch exploded');
+  assert.equal(events[1].retryable, true);
+});
+
+test('a consumer throw rejects the run instead of re-entering the consumer', async () => {
+  const provider = providerYielding(async function* () {
+    yield { type: 'text-delta', text: 'a' };
+    yield { type: 'done', finishReason: 'stop' };
+  });
+  const runner = createChatRunner({ provider, getKey: async () => 'sk-or-test', flushMs: 5 });
+  let calls = 0;
+
+  await assert.rejects(
+    runner.run(request, () => {
+      calls += 1;
+      throw new Error('consumer exploded');
+    }),
+    /consumer exploded/,
+  );
+  assert.equal(calls, 1);
+  assert.equal(runner.isRunning(), false);
 });

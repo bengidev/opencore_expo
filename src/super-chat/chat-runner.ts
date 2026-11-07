@@ -3,7 +3,7 @@ import type { ChatProvider, ChatRequest, ChatStreamEvent } from './llm/types.ts'
 
 const DEFAULT_FLUSH_MS = 50;
 const MISSING_KEY_MESSAGE = 'Add an OpenRouter API key in Settings.';
-const UNEXPECTED_MESSAGE = 'The reply stopped unexpectedly.';
+const STREAM_FAILED_MESSAGE = 'The reply stopped unexpectedly.';
 
 export type ChatRunnerOptions = {
   provider: ChatProvider;
@@ -63,10 +63,20 @@ export function createChatRunner(options: ChatRunnerOptions): ChatRunner {
     controller = active;
     running = true;
 
+    // A consumer that throws is not a provider failure. Stays `true` only for
+    // the duration of one delivery, so the catch below can tell the two apart
+    // instead of re-entering the consumer with a synthetic terminal event.
+    let delivering = false;
+    const emit = (event: ChatStreamEvent): void => {
+      delivering = true;
+      onEvent(event);
+      delivering = false;
+    };
+
     const deltas = createDeltaBuffer((value: DeltaValue) => {
       if (active.signal.aborted) return;
-      if (value.reasoning !== '') onEvent({ type: 'reasoning-delta', text: value.reasoning });
-      if (value.text !== '') onEvent({ type: 'text-delta', text: value.text });
+      if (value.reasoning !== '') emit({ type: 'reasoning-delta', text: value.reasoning });
+      if (value.text !== '') emit({ type: 'text-delta', text: value.text });
     }, flushMs);
     buffer = deltas;
 
@@ -83,7 +93,7 @@ export function createChatRunner(options: ChatRunnerOptions): ChatRunner {
       if (active.signal.aborted) return;
 
       if (apiKey === null) {
-        onEvent({
+        emit({
           type: 'error',
           code: 'missing-key',
           message: MISSING_KEY_MESSAGE,
@@ -92,42 +102,50 @@ export function createChatRunner(options: ChatRunnerOptions): ChatRunner {
         return;
       }
 
-      for await (const event of provider.streamChat(request, {
-        apiKey,
-        fetch,
-        signal: active.signal,
-      })) {
-        // The interruption landed while the provider produced this frame; it
-        // must not reach the screen.
-        if (active.signal.aborted) return;
+      // Only the provider iteration is guarded: a throw from the consumer must
+      // leave `run()` as a rejection, never come back as an error event.
+      try {
+        for await (const event of provider.streamChat(request, {
+          apiKey,
+          fetch,
+          signal: active.signal,
+        })) {
+          // The interruption landed while the provider produced this frame; it
+          // must not reach the screen.
+          if (active.signal.aborted) return;
 
-        if (event.type === 'reasoning-delta') {
-          deltas.push('reasoning', event.text);
-          continue;
-        }
-        if (event.type === 'text-delta') {
-          deltas.push('text', event.text);
-          continue;
+          if (event.type === 'reasoning-delta') {
+            deltas.push('reasoning', event.text);
+            continue;
+          }
+          if (event.type === 'text-delta') {
+            deltas.push('text', event.text);
+            continue;
+          }
+
+          deltas.flush();
+          if (active.signal.aborted) return;
+          emit(event);
+          return;
         }
 
+        // A provider that ends without a terminal event still owes the reader
+        // the text it already streamed.
         deltas.flush();
+      } catch (reason) {
+        if (delivering) throw reason;
         if (active.signal.aborted) return;
-        onEvent(event);
-        return;
+        deltas.flush();
+        emit({
+          type: 'error',
+          code: 'network',
+          message:
+            reason instanceof Error && reason.message !== ''
+              ? reason.message
+              : STREAM_FAILED_MESSAGE,
+          retryable: true,
+        });
       }
-
-      // A provider that ends without a terminal event still owes the reader
-      // the text it already streamed.
-      deltas.flush();
-    } catch (reason) {
-      if (active.signal.aborted) return;
-      deltas.flush();
-      onEvent({
-        type: 'error',
-        code: 'unknown',
-        message: reason instanceof Error && reason.message !== '' ? reason.message : UNEXPECTED_MESSAGE,
-        retryable: true,
-      });
     } finally {
       deltas.dispose();
       release(active);
