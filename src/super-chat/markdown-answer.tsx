@@ -8,6 +8,7 @@ import {
 
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
+import { normalizeMarkdownHtml } from '@/super-chat/markdown-normalize';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 /**
@@ -198,6 +199,8 @@ export const MarkdownAnswer = memo(function MarkdownAnswer({
   const scheme = useColorScheme() === 'dark' ? 'dark' : 'light';
   const markdownStyle = useMemo(() => buildStyle(Colors[scheme]), [scheme]);
 
+  const markdown = useMemo(() => normalizeMarkdownHtml(text), [text]);
+
   const handleLinkPress = useCallback(({ url }: { url: string }) => {
     if (!isAllowedLink(url)) return;
     if (url.startsWith('mailto:') || url.startsWith('tel:')) {
@@ -209,7 +212,7 @@ export const MarkdownAnswer = memo(function MarkdownAnswer({
 
   return (
     <EnrichedMarkdownText
-      markdown={text}
+      markdown={markdown}
       flavor="github"
       streamingAnimation={streaming}
       streamingConfig={{ tableMode: 'progressive', codeBlockMode: 'progressive' }}
