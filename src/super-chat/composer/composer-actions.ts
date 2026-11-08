@@ -62,6 +62,17 @@ export const QUICK_ACTIONS: readonly ComposerActionItem[] = [
   },
 ];
 
+/** Offered only while a reply is streaming. */
+export const STOP_ACTION: ComposerActionItem = {
+  id: 'action:stop',
+  title: 'Stop',
+  subtitle: 'Stop the reply',
+  iosSymbol: 'stop.fill',
+  androidIcon: 'stop',
+  fallbackIcon: 'stop',
+  keywords: ['cancel', 'halt', 'interrupt'],
+};
+
 function matchesItem(item: ComposerActionItem, needle: string): boolean {
   if (item.title.toLowerCase().includes(needle)) return true;
   if (item.subtitle?.toLowerCase().includes(needle)) return true;

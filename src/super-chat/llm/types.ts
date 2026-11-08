@@ -18,8 +18,6 @@ export type ChatStreamEvent =
       code: ChatErrorCode;
       message: string;
       retryable: boolean;
-      /** Raw transport text, for logs only — never rendered. */
-      debugMessage?: string;
     };
 
 export type ProviderModel = {

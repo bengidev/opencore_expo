@@ -60,7 +60,7 @@ test('a rejected catalogue request settles into fallback', async () => {
   );
 });
 
-test('a provider that resolves its fallback row also settles into fallback', async () => {
+test('a provider resolving exactly the fallback row yields ready', async () => {
   const base = getProvider('openrouter');
   const provider = {
     ...base,
@@ -71,6 +71,12 @@ test('a provider that resolves its fallback row also settles into fallback', asy
     fetch: async () => new Response(''),
   });
 
-  assert.equal(result.kind, 'fallback');
+  // A live answer is never inferred to be a failure from its ids: only a
+  // rejection flips the status, so a one-model catalogue stays usable.
+  assert.equal(result.kind, 'ready');
   assert.equal(result.error, null);
+  assert.deepEqual(
+    result.models.map((model) => model.id),
+    base.fallbackModels.map((model) => model.id),
+  );
 });

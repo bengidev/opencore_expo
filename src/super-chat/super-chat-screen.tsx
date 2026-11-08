@@ -57,6 +57,7 @@ export function SuperChatScreen() {
     status,
     error,
     reload,
+    retryOnOpen,
   } = useModelCatalog();
   const homeModels = useMemo(() => models.map(toHomeModel), [models]);
   const { start, abort, isStreaming } = useChatRequest({
@@ -180,7 +181,9 @@ export function SuperChatScreen() {
             status={status}
             error={error}
             reload={reload}
+            retryOnOpen={retryOnOpen}
             isStreaming={isStreaming}
+            onStop={abort}
           />
         </View>
       </Animated.View>

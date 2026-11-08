@@ -2,6 +2,8 @@ import { createDeltaBuffer, type DeltaBuffer, type DeltaValue } from './delta-bu
 import type { ChatProvider, ChatRequest, ChatStreamEvent } from './llm/types.ts';
 
 const DEFAULT_FLUSH_MS = 50;
+/** Node has no `__DEV__`; tests run there and should still see the log. */
+const DEV = typeof __DEV__ === 'undefined' || __DEV__;
 const MISSING_KEY_MESSAGE = 'Add an OpenRouter API key in Settings.';
 const STREAM_FAILED_MESSAGE = 'The connection dropped before the reply finished.';
 
@@ -11,6 +13,11 @@ export type ChatRunnerOptions = {
   getKey: () => Promise<string | null>;
   /** How long deltas coalesce before one update reaches the screen. */
   flushMs?: number;
+  /**
+   * Receives the raw cause of a provider rejection in development. Injected so
+   * tests can assert on it; the user only ever sees the curated copy.
+   */
+  log?: (message: string, reason: unknown) => void;
 };
 
 export type ChatRunner = {
@@ -29,7 +36,7 @@ export type ChatRunner = {
  * interrupted run ends silently because the screen settles that reply itself.
  */
 export function createChatRunner(options: ChatRunnerOptions): ChatRunner {
-  const { provider, getKey, flushMs = DEFAULT_FLUSH_MS } = options;
+  const { provider, getKey, flushMs = DEFAULT_FLUSH_MS, log = console.warn } = options;
 
   let controller: AbortController | null = null;
   let buffer: DeltaBuffer | null = null;
@@ -136,14 +143,14 @@ export function createChatRunner(options: ChatRunnerOptions): ChatRunner {
         if (delivering) throw reason;
         if (active.signal.aborted) return;
         deltas.flush();
-        const debugMessage =
-          reason instanceof Error && reason.message !== '' ? reason.message : null;
+        // The screen keeps the curated sentence; the raw cause goes to the
+        // console where a developer can find it.
+        if (DEV) log('[chat-runner]', reason);
         emit({
           type: 'error',
           code: 'network',
           message: STREAM_FAILED_MESSAGE,
           retryable: true,
-          ...(debugMessage === null ? {} : { debugMessage }),
         });
       }
     } finally {

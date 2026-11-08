@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   getModelSelection,
@@ -19,6 +19,9 @@ import { useModelSelection } from './use-model-selection.ts';
 /** How long a fetched catalogue stays fresh before the next mount refetches it. */
 const MODEL_CACHE_MS = 10 * 60 * 1000;
 
+/** The sheet's automatic retry on open stays quiet for this long after a try. */
+const RETRY_GUARD_MS = 10 * 1000;
+
 export type ModelCatalogStatus = 'loading' | 'ready' | 'fallback';
 
 type CachedCatalog = { at: number; models: ProviderModel[] };
@@ -36,9 +39,9 @@ export type CatalogLoad =
   | { kind: 'fallback'; models: ProviderModel[]; error: string | null };
 
 /**
- * Runs one catalogue request to a settled outcome. Providers report failure
- * either by rejecting or by resolving their synthetic fallback row; both end
- * in 'fallback', so the UI can offer a retry.
+ * Runs one catalogue request to a settled outcome. Only a rejection is a
+ * failure: a provider that resolves a list - even one whose ids match its
+ * fallback row - has delivered a live answer, and is reported as 'ready'.
  */
 export async function loadModelCatalog(
   provider: ChatProvider,
@@ -46,10 +49,7 @@ export async function loadModelCatalog(
 ): Promise<CatalogLoad> {
   try {
     const live = await provider.listModels(context);
-    const usable = live.length > 0 && !isFallbackList(live, provider.fallbackModels);
-    return usable
-      ? { kind: 'ready', models: live, error: null }
-      : { kind: 'fallback', models: [...provider.fallbackModels], error: null };
+    return { kind: 'ready', models: live, error: null };
   } catch (reason: unknown) {
     return {
       kind: 'fallback',
@@ -61,9 +61,7 @@ export async function loadModelCatalog(
 
 /**
  * True while a fetched list is still the provider's synthetic fallback row.
- * Providers report a failed catalogue by returning that row instead of
- * rejecting, so identity by ids is the only way to tell it apart from a live
- * list that happens to have the same size.
+ * Used only to keep a stand-in out of the cache; it never decides the status.
  */
 export function isFallbackList(
   models: readonly ProviderModel[],
@@ -135,6 +133,10 @@ export function useModelCatalog(provider: ChatProvider = getProvider(DEFAULT_PRO
   const [catalog, setCatalog] = useState<CatalogState>(() => seedState(provider));
   const [reloadToken, setReloadToken] = useState(0);
   const selection = useModelSelection();
+  // Set by the request's catch and cleared by its success; `status` reads this
+  // flag, never the payload, so a genuinely small live list stays 'ready'.
+  const failedRef = useRef(false);
+  const lastAttemptAtRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -144,21 +146,27 @@ export function useModelCatalog(provider: ChatProvider = getProvider(DEFAULT_PRO
     if (readCache(provider.id) !== null) return;
 
     void (async () => {
+      lastAttemptAtRef.current = Date.now();
       // Runtime-only import: the keychain module pulls React Native and Expo,
       // which the Node tests cannot load.
       const apiKey = await readApiKey();
       const loaded = await loadModelCatalog(provider, { apiKey, fetch });
+      failedRef.current = loaded.kind === 'fallback';
       // Never cache a stand-in (the provider's fallback row, or an empty
       // answer): it would hide the catalogue for ten minutes. Write before
       // the cancellation check so leaving Home keeps the result.
-      if (loaded.kind === 'ready') {
+      if (
+        loaded.kind === 'ready' &&
+        loaded.models.length > 0 &&
+        !isFallbackList(loaded.models, provider.fallbackModels)
+      ) {
         pruneExpired();
         cache.set(provider.id, { at: Date.now(), models: loaded.models });
       }
       if (cancelled) return;
       setCatalog({
         models: loaded.models,
-        status: loaded.kind,
+        status: failedRef.current ? 'fallback' : 'ready',
         error: loaded.error,
       });
     })();
@@ -202,6 +210,16 @@ export function useModelCatalog(provider: ChatProvider = getProvider(DEFAULT_PRO
     setReloadToken((token) => token + 1);
   }, [provider]);
 
+  /**
+   * The sheet's automatic retry when it opens. Reopening in the same failure
+   * window must not refetch, or the caption and skeleton flicker on every tap;
+   * the explicit "Try again" still calls `reload`.
+   */
+  const retryOnOpen = useCallback(() => {
+    if (Date.now() - lastAttemptAtRef.current < RETRY_GUARD_MS) return;
+    reload();
+  }, [reload]);
+
   return useMemo(
     () => ({
       provider,
@@ -213,11 +231,13 @@ export function useModelCatalog(provider: ChatProvider = getProvider(DEFAULT_PRO
       thinking,
       selectModel,
       reload,
+      retryOnOpen,
     }),
     [
       catalog,
       provider,
       reload,
+      retryOnOpen,
       selectModel,
       selectedModel,
       selection,

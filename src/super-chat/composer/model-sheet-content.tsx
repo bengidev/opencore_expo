@@ -1,4 +1,3 @@
-import { Shimmer } from 'panelui-native/components/shimmer';
 import type { ComponentRef } from 'react';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
@@ -27,6 +26,7 @@ import {
   THINKING_TRIGGER_HEIGHT,
   THINKING_TRIGGER_WIDTH,
 } from '@/super-chat/composer/model-sheet-metrics';
+import { ModelSheetStatus } from '@/super-chat/composer/model-sheet-status';
 import { ThinkingLevelControl } from '@/super-chat/composer/model-thinking-control';
 import { clampThinkingLevel } from '@/super-chat/llm/thinking';
 import type { ModelCatalogStatus } from '@/super-chat/llm/use-model-catalog';
@@ -60,6 +60,7 @@ export function ModelSheetContent({
   resetKey = 0,
   thinkingByModel,
   status,
+  error,
   onRetry,
   onQueryChange,
   onThinkingChange,
@@ -136,72 +137,53 @@ export function ModelSheetContent({
         />
       </View>
 
-      {status === 'loading' ? (
-        <ModelSkeletonRows />
-      ) : (
-        <>
-          {status === 'fallback' ? (
-            <View style={styles.fallback}>
-              <ThemedText variant="caption" themeColor="textSecondary">
-                {"Couldn't load the live catalogue."}
+      <ModelSheetStatus status={status} error={error} onRetry={onRetry} />
+
+      {status === 'loading' ? null : (
+        <FlatList
+          data={visibleModels}
+          keyExtractor={(model) => model.id}
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          nestedScrollEnabled
+          keyboardShouldPersistTaps="handled"
+          onScrollBeginDrag={dismissCapability}
+          ListHeaderComponent={
+            <View style={styles.listHeader}>
+              <ThemedText variant="subheading" themeColor="textDisplay">
+                Select a model
               </ThemedText>
-              <Pressable
-                accessibilityRole="button"
-                onPress={onRetry}
-                testID="model-sheet-retry"
-                hitSlop={8}
-                style={({ pressed }) => [styles.retry, pressed && { opacity: 0.6 }]}>
-                <ThemedText variant="label" themeColor="textDisplay">
-                  Try again
-                </ThemedText>
-              </Pressable>
+              <ThemedText variant="caption" themeColor="textSecondary">
+                Sets the speed and depth of every reply.
+              </ThemedText>
             </View>
-          ) : null}
-          <FlatList
-            data={visibleModels}
-            keyExtractor={(model) => model.id}
-            style={styles.list}
-            contentContainerStyle={styles.listContent}
-            nestedScrollEnabled
-            keyboardShouldPersistTaps="handled"
-            onScrollBeginDrag={dismissCapability}
-            ListHeaderComponent={
-              <View style={styles.listHeader}>
-                <ThemedText variant="subheading" themeColor="textDisplay">
-                  Select a model
-                </ThemedText>
-                <ThemedText variant="caption" themeColor="textSecondary">
-                  Sets the speed and depth of every reply.
-                </ThemedText>
-              </View>
-            }
-            renderItem={({ item }) => (
-              <ModelRow
-                model={item}
-                isSelected={item.id === selectedId}
-                thinkingLevel={clampThinkingLevel(
-                  item.thinkingLevels,
-                  thinkingByModel[item.id],
-                )}
-                activeCapabilityId={
-                  visibleTooltip?.anchor.modelId === item.id
-                    ? visibleTooltip.anchor.capability
-                    : null
-                }
-                onThinkingChange={onThinkingChange}
-                onShowCapability={showCapability}
-                onSelect={handleSelect}
-              />
-            )}
-            ListEmptyComponent={
-              <View style={styles.empty}>
-                <ThemedText variant="bodySm" themeColor="textSecondary">
-                  No models match “{query.trim()}”.
-                </ThemedText>
-              </View>
-            }
-          />
-        </>
+          }
+          renderItem={({ item }) => (
+            <ModelRow
+              model={item}
+              isSelected={item.id === selectedId}
+              thinkingLevel={clampThinkingLevel(
+                item.thinkingLevels,
+                thinkingByModel[item.id],
+              )}
+              activeCapabilityId={
+                visibleTooltip?.anchor.modelId === item.id
+                  ? visibleTooltip.anchor.capability
+                  : null
+              }
+              onThinkingChange={onThinkingChange}
+              onShowCapability={showCapability}
+              onSelect={handleSelect}
+            />
+          )}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <ThemedText variant="bodySm" themeColor="textSecondary">
+                No models match “{query.trim()}”.
+              </ThemedText>
+            </View>
+          }
+        />
       )}
 
       <View ref={overlayRef} style={styles.overlay} pointerEvents="box-none">
@@ -212,29 +194,6 @@ export function ModelSheetContent({
         />
       </View>
     </View>
-  );
-}
-
-/** Three quiet placeholder rows while the live catalogue is in flight. */
-function ModelSkeletonRows() {
-  const theme = useTheme();
-  return (
-    <Shimmer
-      as="view"
-      duration={1400}
-      baseColor={theme.surfaceRaised}
-      shimmerColor={theme.surface}
-      style={styles.skeleton}>
-      {[0, 1, 2].map((row) => (
-        <View key={row} style={styles.skeletonRow}>
-          <View style={[styles.skeletonIcon, { backgroundColor: theme.surfaceRaised }]} />
-          <View style={styles.skeletonText}>
-            <View style={[styles.skeletonName, { backgroundColor: theme.surfaceRaised }]} />
-            <View style={[styles.skeletonLine, { backgroundColor: theme.surfaceRaised }]} />
-          </View>
-        </View>
-      ))}
-    </Shimmer>
   );
 }
 
@@ -402,48 +361,5 @@ const styles = StyleSheet.create({
   empty: {
     paddingVertical: Spacing.four,
     alignItems: 'center',
-  },
-  fallback: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.two,
-    paddingBottom: Spacing.two,
-  },
-  retry: {
-    borderRadius: 999,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: Spacing.one,
-  },
-  skeleton: {
-    gap: Spacing.two,
-    paddingHorizontal: Spacing.two,
-    paddingTop: Spacing.two,
-  },
-  skeletonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-    paddingVertical: Spacing.two,
-  },
-  skeletonIcon: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
-  },
-  skeletonText: {
-    flex: 1,
-    gap: 6,
-  },
-  skeletonName: {
-    width: '45%',
-    height: 14,
-    borderRadius: 7,
-  },
-  skeletonLine: {
-    width: '80%',
-    height: 10,
-    borderRadius: 5,
   },
 });

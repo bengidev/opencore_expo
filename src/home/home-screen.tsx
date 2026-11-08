@@ -43,8 +43,16 @@ export function HomeScreen() {
     reservedBottom,
   );
   const [draft, setDraft] = useState('');
-  const { models, selectedModel, selection, selectModel, status, error, reload } =
-    useModelCatalog();
+  const {
+    models,
+    selectedModel,
+    selection,
+    selectModel,
+    status,
+    error,
+    reload,
+    retryOnOpen,
+  } = useModelCatalog();
   const homeModels = useMemo(() => models.map(toHomeModel), [models]);
 
   const handleModelSelect = useCallback(
@@ -127,7 +135,9 @@ export function HomeScreen() {
                   status={status}
                   error={error}
                   reload={reload}
+                  retryOnOpen={retryOnOpen}
                   isStreaming={false}
+                  onStop={() => undefined}
                 />
               </Animated.View>
             </View>

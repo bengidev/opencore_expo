@@ -1,5 +1,4 @@
 import {
-  Box,
   Column,
   DropdownMenu,
   DropdownMenuItem,
@@ -9,6 +8,7 @@ import {
   ListItem,
   ModalBottomSheet,
   OutlinedTextField,
+  RNHostView,
   Row,
   Text,
 } from '@expo/ui/jetpack-compose';
@@ -17,10 +17,8 @@ import {
   clip,
   clickable,
   fillMaxWidth,
-  height,
   padding,
   Shapes,
-  size,
   weight,
 } from '@expo/ui/jetpack-compose/modifiers';
 import * as Haptics from 'expo-haptics';
@@ -31,6 +29,7 @@ import { useMaterialTheme } from '@/hooks/use-material-theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { ComposerControlVariant } from '@/super-chat/composer/composer-actions-trigger';
 import { ComposerModelTrigger } from '@/super-chat/composer/composer-model-trigger';
+import { ModelSheetStatus } from '@/super-chat/composer/model-sheet-status';
 import {
   THINKING_LEVEL_LABELS,
   filterHomeModels,
@@ -49,7 +48,10 @@ type ComposerModelSheetProps = {
   thinkingByModel: Record<string, ThinkingLevel>;
   status: ModelCatalogStatus;
   error: string | null;
+  /** Explicit retry: always refetches. */
   reload: () => void;
+  /** Retry on open: skipped inside the hook's guard window. */
+  retryOnOpen: () => void;
   variant?: ComposerControlVariant;
   onThinkingChange: (modelId: string, level: ThinkingLevel) => void;
   onSelect: (id: string) => void;
@@ -94,7 +96,9 @@ export function ComposerModelSheet({
   selectedId,
   thinkingByModel,
   status,
+  error,
   reload,
+  retryOnOpen,
   variant,
   onThinkingChange,
   onSelect,
@@ -139,7 +143,7 @@ export function ComposerModelSheet({
         onPress={() => {
           setQuery('');
           // A fallback row is a stand-in, not a catalogue: retry on open.
-          if (status === 'fallback') reload();
+          if (status === 'fallback') retryOnOpen();
           setIsOpen(true);
         }}
       />
@@ -191,64 +195,12 @@ export function ComposerModelSheet({
                 style={{ fontSize: 12 }}>
                 Sets the speed and depth of every reply.
               </Text>
-              {status === 'fallback' ? (
-                <Row
-                  verticalAlignment="center"
-                  horizontalArrangement={{ spacedBy: 8 }}
-                  modifiers={[fillMaxWidth(), padding(0, 0, 0, 8)]}>
-                  <Text color={theme.textSecondary} style={{ fontSize: 12 }}>
-                    {"Couldn't load the live catalogue."}
-                  </Text>
-                  <Row
-                    verticalAlignment="center"
-                    modifiers={[
-                      clip(Shapes.RoundedCorner(999)),
-                      background(theme.surfaceRaised),
-                      padding(10, 4, 10, 4),
-                      clickable(reload),
-                    ]}>
-                    <Text
-                      color={theme.textDisplay}
-                      style={{ fontSize: 12, fontWeight: '600' }}>
-                      Try again
-                    </Text>
-                  </Row>
-                </Row>
-              ) : null}
-              {status === 'loading' ? (
-                <Column
-                  verticalArrangement={{ spacedBy: 8 }}
-                  modifiers={[fillMaxWidth(), padding(0, 8, 0, 0)]}>
-                  {[0, 1, 2].map((row) => (
-                    <Row
-                      key={row}
-                      verticalAlignment="center"
-                      horizontalArrangement={{ spacedBy: 12 }}
-                      modifiers={[
-                        fillMaxWidth(),
-                        height(56),
-                        clip(Shapes.RoundedCorner(14)),
-                        background(theme.surfaceRaised),
-                        padding(12, 12, 12, 12),
-                      ]}>
-                      <Box
-                        modifiers={[
-                          size(20, 20),
-                          clip(Shapes.RoundedCorner(6)),
-                          background(theme.border),
-                        ]}
-                      />
-                      <Box
-                        modifiers={[
-                          size(140, 14),
-                          clip(Shapes.RoundedCorner(7)),
-                          background(theme.border),
-                        ]}
-                      />
-                    </Row>
-                  ))}
-                </Column>
-              ) : (
+              {status === 'ready' ? null : (
+                <RNHostView matchContents={{ vertical: true }} modifiers={[fillMaxWidth()]}>
+                  <ModelSheetStatus status={status} error={error} onRetry={reload} />
+                </RNHostView>
+              )}
+              {status === 'loading' ? null : (
               <LazyColumn modifiers={[fillMaxWidth(), weight(1)]}>
                 {visibleModels.map((model) => {
                   const level = clampThinkingLevel(

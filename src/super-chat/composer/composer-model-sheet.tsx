@@ -21,7 +21,10 @@ type ComposerModelSheetProps = {
   thinkingByModel: Record<string, ThinkingLevel>;
   status: ModelCatalogStatus;
   error: string | null;
+  /** Explicit retry: always refetches. */
   reload: () => void;
+  /** Retry on open: skipped inside the hook's guard window. */
+  retryOnOpen: () => void;
   variant?: ComposerControlVariant;
   onThinkingChange: (modelId: string, level: ThinkingLevel) => void;
   onSelect: (id: string) => void;
@@ -39,6 +42,7 @@ export function ComposerModelSheet({
   status,
   error,
   reload,
+  retryOnOpen,
   variant,
   onThinkingChange,
   onSelect,
@@ -62,11 +66,12 @@ export function ComposerModelSheet({
   const open = useCallback(() => {
     setQuery('');
     setResetKey((key) => key + 1);
-    // A fallback row is a stand-in, not a catalogue: retry as the sheet opens.
-    if (status === 'fallback') reload();
+    // A fallback row is a stand-in, not a catalogue: retry as the sheet opens,
+    // unless the hook's guard says a try just happened.
+    if (status === 'fallback') retryOnOpen();
     requestedSnapIndex.current = preferredSnapIndex.current;
     sheetRef.current?.snapToIndex(preferredSnapIndex.current);
-  }, [reload, status]);
+  }, [retryOnOpen, status]);
 
   const handleSnapChange = useCallback((index: number) => {
     if (index < 0) return;

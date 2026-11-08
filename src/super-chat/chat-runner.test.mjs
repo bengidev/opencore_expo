@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { createChatRunner } from './chat-runner.ts';
+import { createStreamingFlag } from './streaming-flag.ts';
 
 function deferred() {
   let resolve;
@@ -96,12 +97,18 @@ test('abort delivers the buffered delta once and emits no terminal event', async
   assert.equal(runner.isRunning(), false);
 });
 
-test('a provider throw keeps the streamed deltas and ends with one retryable error', async () => {
+test('a provider throw keeps the streamed deltas, ends with one retryable error, and logs the cause', async () => {
   const provider = providerYielding(async function* () {
     yield { type: 'text-delta', text: 'part' };
     throw new TypeError('fetch exploded');
   });
-  const runner = createChatRunner({ provider, getKey: async () => 'sk-or-test', flushMs: 5 });
+  const logs = [];
+  const runner = createChatRunner({
+    provider,
+    getKey: async () => 'sk-or-test',
+    flushMs: 5,
+    log: (message, reason) => logs.push({ message, reason }),
+  });
   const events = [];
 
   assert.equal(runner.isRunning(), false);
@@ -115,8 +122,41 @@ test('a provider throw keeps the streamed deltas and ends with one retryable err
   assert.equal(events[1].type, 'error');
   assert.equal(events[1].code, 'network');
   assert.equal(events[1].message, 'The connection dropped before the reply finished.');
-  assert.equal(events[1].debugMessage, 'fetch exploded');
   assert.equal(events[1].retryable, true);
+  assert.equal('debugMessage' in events[1], false);
+  // The raw cause is for the developer, through the injected logger.
+  assert.equal(logs.length, 1);
+  assert.equal(logs[0].message, '[chat-runner]');
+  assert.equal(logs[0].reason.message, 'fetch exploded');
+});
+
+test('abort stops a paused stream and clears the streaming flag without an error', async () => {
+  const gate = deferred();
+  const provider = providerYielding(async function* () {
+    yield { type: 'text-delta', text: 'partial' };
+    await gate.promise;
+    yield { type: 'done', finishReason: 'stop' };
+  });
+  const runner = createChatRunner({ provider, getKey: async () => 'sk-or-test', flushMs: 5 });
+  const updates = [];
+  const flag = createStreamingFlag((streaming) => updates.push(streaming), 0);
+  const events = [];
+
+  flag.begin();
+  const run = runner.run(request, (event) => events.push(event));
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(flag.streaming, true);
+
+  // What the hook's abort does: stop the run, then retire its flag token.
+  runner.abort();
+  flag.cancel();
+  gate.resolve();
+  await run;
+
+  assert.equal(flag.streaming, false);
+  assert.equal(updates.at(-1), false);
+  assert.equal(runner.isRunning(), false);
+  assert.equal(events.some((event) => event.type === 'error'), false);
 });
 
 test('a consumer throw rejects the run instead of re-entering the consumer', async () => {

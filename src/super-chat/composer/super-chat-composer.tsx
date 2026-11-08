@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
@@ -12,7 +12,11 @@ import { useFontFamily } from '@/hooks/use-font-family';
 import { useTheme } from '@/hooks/use-theme';
 import { hasNativeChrome } from '@/lib/ui-tier';
 import type { HomeModel, ThinkingLevel } from '@/super-chat/composer/chat-models';
-import { QUICK_ACTIONS, type ComposerActionItem } from '@/super-chat/composer/composer-actions';
+import {
+  QUICK_ACTIONS,
+  STOP_ACTION,
+  type ComposerActionItem,
+} from '@/super-chat/composer/composer-actions';
 import { ComposerActionsPopover } from '@/super-chat/composer/composer-actions-popover';
 import { ComposerModelSheet } from '@/super-chat/composer/composer-model-sheet';
 import { ComposerSendButton } from '@/super-chat/composer/composer-send-button';
@@ -38,8 +42,12 @@ export type SuperChatComposerProps = {
   error: string | null;
   /** Refetches the catalogue after a failure. */
   reload: () => void;
+  /** Retries on sheet open, skipping a try that just happened. */
+  retryOnOpen: () => void;
   /** True while a reply is streaming; blocks a second send. */
   isStreaming: boolean;
+  /** Stops the reply in flight. */
+  onStop: () => void;
   translucent?: boolean;
 };
 
@@ -56,13 +64,19 @@ export function SuperChatComposer({
   status,
   error,
   reload,
+  retryOnOpen,
   isStreaming,
+  onStop,
   translucent = false,
 }: SuperChatComposerProps) {
   const theme = useTheme();
   const reducedMotion = useReducedMotion();
   const sans = useFontFamily('sans');
   const trimmed = draft.trim();
+  const actions = useMemo(
+    () => (isStreaming ? [...QUICK_ACTIONS, STOP_ACTION] : QUICK_ACTIONS),
+    [isStreaming],
+  );
 
   function handleModelSelect(id: string) {
     onModelSelect(id);
@@ -82,6 +96,9 @@ export function SuperChatComposer({
         return;
       case 'action:new-chat':
         onNewChat();
+        return;
+      case 'action:stop':
+        onStop();
         return;
       default:
         return;
@@ -121,11 +138,12 @@ export function SuperChatComposer({
           status={status}
           error={error}
           reload={reload}
+          retryOnOpen={retryOnOpen}
           onThinkingChange={onThinkingChange}
           onSelect={handleModelSelect}
         />
         <View style={styles.toolbarSpacer} />
-        <ComposerActionsPopover items={QUICK_ACTIONS} onSelect={handleActionSelect} />
+        <ComposerActionsPopover items={actions} onSelect={handleActionSelect} />
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Voice input"
@@ -134,9 +152,10 @@ export function SuperChatComposer({
           <AppIcon ios="mic" android="mic" size={22} color={theme.textDisplay} />
         </Pressable>
         <ComposerSendButton
-          enabled={Boolean(trimmed) && !isStreaming}
+          enabled={isStreaming || Boolean(trimmed)}
+          mode={isStreaming ? 'stop' : 'send'}
           metalActive={!reducedMotion}
-          onPress={handleSend}
+          onPress={isStreaming ? onStop : handleSend}
         />
       </View>
     </ComposerShell>
