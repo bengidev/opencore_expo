@@ -3,7 +3,7 @@ import type { ChatProvider, ChatRequest, ChatStreamEvent } from './llm/types.ts'
 
 const DEFAULT_FLUSH_MS = 50;
 const MISSING_KEY_MESSAGE = 'Add an OpenRouter API key in Settings.';
-const STREAM_FAILED_MESSAGE = 'The reply stopped unexpectedly.';
+const STREAM_FAILED_MESSAGE = 'The connection dropped before the reply finished.';
 
 export type ChatRunnerOptions = {
   provider: ChatProvider;
@@ -136,14 +136,14 @@ export function createChatRunner(options: ChatRunnerOptions): ChatRunner {
         if (delivering) throw reason;
         if (active.signal.aborted) return;
         deltas.flush();
+        const debugMessage =
+          reason instanceof Error && reason.message !== '' ? reason.message : null;
         emit({
           type: 'error',
           code: 'network',
-          message:
-            reason instanceof Error && reason.message !== ''
-              ? reason.message
-              : STREAM_FAILED_MESSAGE,
+          message: STREAM_FAILED_MESSAGE,
           retryable: true,
+          ...(debugMessage === null ? {} : { debugMessage }),
         });
       }
     } finally {

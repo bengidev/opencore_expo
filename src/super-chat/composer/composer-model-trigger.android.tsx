@@ -15,6 +15,7 @@ const MODEL_ICONS: Record<HomeModelAndroidIcon, ImageSourcePropType> = {
   code: require('@expo/material-symbols/code.xml'),
   globe: require('@expo/material-symbols/globe.xml'),
   psychology: require('@expo/material-symbols/psychology.xml'),
+  auto_awesome_mosaic: require('@expo/material-symbols/auto_awesome_mosaic.xml'),
   chat: require('@expo/material-symbols/chat.xml'),
 };
 

@@ -19,7 +19,7 @@ import { useModelSelection } from './use-model-selection.ts';
 /** How long a fetched catalogue stays fresh before the next mount refetches it. */
 const MODEL_CACHE_MS = 10 * 60 * 1000;
 
-type ModelCatalogStatus = 'loading' | 'ready' | 'fallback';
+export type ModelCatalogStatus = 'loading' | 'ready' | 'fallback';
 
 type CachedCatalog = { at: number; models: ProviderModel[] };
 
@@ -30,6 +30,34 @@ type CatalogState = {
   status: ModelCatalogStatus;
   error: string | null;
 };
+
+export type CatalogLoad =
+  | { kind: 'ready'; models: ProviderModel[]; error: null }
+  | { kind: 'fallback'; models: ProviderModel[]; error: string | null };
+
+/**
+ * Runs one catalogue request to a settled outcome. Providers report failure
+ * either by rejecting or by resolving their synthetic fallback row; both end
+ * in 'fallback', so the UI can offer a retry.
+ */
+export async function loadModelCatalog(
+  provider: ChatProvider,
+  context: ModelListContext,
+): Promise<CatalogLoad> {
+  try {
+    const live = await provider.listModels(context);
+    const usable = live.length > 0 && !isFallbackList(live, provider.fallbackModels);
+    return usable
+      ? { kind: 'ready', models: live, error: null }
+      : { kind: 'fallback', models: [...provider.fallbackModels], error: null };
+  } catch (reason: unknown) {
+    return {
+      kind: 'fallback',
+      models: [...provider.fallbackModels],
+      error: reason instanceof Error ? reason.message : String(reason),
+    };
+  }
+}
 
 /**
  * True while a fetched list is still the provider's synthetic fallback row.
@@ -43,6 +71,17 @@ export function isFallbackList(
 ): boolean {
   if (models.length !== fallback.length) return false;
   return models.every((model, index) => model.id === fallback[index]?.id);
+}
+
+/** The saved key, read lazily so this module stays importable in Node. */
+async function readApiKey(): Promise<string | null> {
+  try {
+    const { readKeyStatus } = await import('./credentials-runtime.ts');
+    const status = await readKeyStatus();
+    return status.key;
+  } catch {
+    return null;
+  }
 }
 
 function isFresh(entry: CachedCatalog): boolean {
@@ -104,34 +143,25 @@ export function useModelCatalog(provider: ChatProvider = getProvider(DEFAULT_PRO
     // A fresh cache entry is already in state; only fetch when there is none.
     if (readCache(provider.id) !== null) return;
 
-    const context: ModelListContext = { apiKey: null, fetch };
-
-    void provider
-      .listModels(context)
-      .then((live) => {
-        const usable = live.length > 0 && !isFallbackList(live, provider.fallbackModels);
-        // Never cache a stand-in (the provider's fallback row, or an empty
-        // answer): it would hide the catalogue for ten minutes. Write before
-        // the cancellation check so leaving Home keeps the result.
-        if (usable) {
-          pruneExpired();
-          cache.set(provider.id, { at: Date.now(), models: live });
-        }
-        if (cancelled) return;
-        setCatalog(
-          usable
-            ? { models: live, status: 'ready', error: null }
-            : { models: [...provider.fallbackModels], status: 'fallback', error: null },
-        );
-      })
-      .catch((reason: unknown) => {
-        if (cancelled) return;
-        setCatalog({
-          models: [...provider.fallbackModels],
-          status: 'fallback',
-          error: reason instanceof Error ? reason.message : String(reason),
-        });
+    void (async () => {
+      // Runtime-only import: the keychain module pulls React Native and Expo,
+      // which the Node tests cannot load.
+      const apiKey = await readApiKey();
+      const loaded = await loadModelCatalog(provider, { apiKey, fetch });
+      // Never cache a stand-in (the provider's fallback row, or an empty
+      // answer): it would hide the catalogue for ten minutes. Write before
+      // the cancellation check so leaving Home keeps the result.
+      if (loaded.kind === 'ready') {
+        pruneExpired();
+        cache.set(provider.id, { at: Date.now(), models: loaded.models });
+      }
+      if (cancelled) return;
+      setCatalog({
+        models: loaded.models,
+        status: loaded.kind,
+        error: loaded.error,
       });
+    })();
 
     return () => {
       cancelled = true;

@@ -83,6 +83,8 @@ export async function* streamOpenRouterChat(
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://opencore.app',
+        'X-OpenRouter-Title': 'OpenCore',
       },
       body: JSON.stringify(buildChatRequest(request)),
       signal: context.signal,
@@ -146,7 +148,11 @@ export async function listOpenRouterModels(
   context: ModelListContext,
 ): Promise<ProviderModel[]> {
   try {
-    const response = await context.fetch(`${API_BASE_URL}/models`);
+    const headers =
+      context.apiKey != null && context.apiKey.length > 0
+        ? { Authorization: `Bearer ${context.apiKey}` }
+        : undefined;
+    const response = await context.fetch(`${API_BASE_URL}/models`, { headers });
     if (!response.ok) {
       await discardBody(response);
       return openRouterFallbackModels();

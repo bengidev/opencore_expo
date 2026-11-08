@@ -8,6 +8,7 @@ import type { ComposerControlVariant } from '@/super-chat/composer/composer-acti
 import { ComposerModelTrigger } from '@/super-chat/composer/composer-model-trigger';
 import type { HomeModel, ThinkingLevel } from '@/super-chat/composer/chat-models';
 import { ModelSheetContent } from '@/super-chat/composer/model-sheet-content';
+import type { ModelCatalogStatus } from '@/super-chat/llm/use-model-catalog';
 import {
   MODEL_SHEET_DEFAULT_SNAP_INDEX,
   MODEL_SHEET_SNAP_POINTS,
@@ -18,6 +19,9 @@ type ComposerModelSheetProps = {
   selectedId: string;
   /** Thinking level per model id, owned by the screen. */
   thinkingByModel: Record<string, ThinkingLevel>;
+  status: ModelCatalogStatus;
+  error: string | null;
+  reload: () => void;
   variant?: ComposerControlVariant;
   onThinkingChange: (modelId: string, level: ThinkingLevel) => void;
   onSelect: (id: string) => void;
@@ -32,6 +36,9 @@ export function ComposerModelSheet({
   models,
   selectedId,
   thinkingByModel,
+  status,
+  error,
+  reload,
   variant,
   onThinkingChange,
   onSelect,
@@ -55,9 +62,11 @@ export function ComposerModelSheet({
   const open = useCallback(() => {
     setQuery('');
     setResetKey((key) => key + 1);
+    // A fallback row is a stand-in, not a catalogue: retry as the sheet opens.
+    if (status === 'fallback') reload();
     requestedSnapIndex.current = preferredSnapIndex.current;
     sheetRef.current?.snapToIndex(preferredSnapIndex.current);
-  }, []);
+  }, [reload, status]);
 
   const handleSnapChange = useCallback((index: number) => {
     if (index < 0) return;
@@ -112,6 +121,9 @@ export function ComposerModelSheet({
           query={query}
           resetKey={resetKey}
           thinkingByModel={thinkingByModel}
+          status={status}
+          error={error}
+          onRetry={reload}
           onQueryChange={setQuery}
           onThinkingChange={handleThinkingChange}
           onSelect={handleSelect}

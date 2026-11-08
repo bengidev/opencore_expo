@@ -47,10 +47,19 @@ export function SuperChatScreen() {
   // committed the last delta; the state mirror alone is one render behind.
   const messagesRef = useRef(messages);
   const [draft, setDraft] = useState('');
-  const { provider, models, selectedModel, selection, thinking, selectModel } =
-    useModelCatalog();
+  const {
+    provider,
+    models,
+    selectedModel,
+    selection,
+    thinking,
+    selectModel,
+    status,
+    error,
+    reload,
+  } = useModelCatalog();
   const homeModels = useMemo(() => models.map(toHomeModel), [models]);
-  const { start, abort } = useChatRequest({
+  const { start, abort, isStreaming } = useChatRequest({
     provider,
     modelId: selectedModel.id,
     thinking,
@@ -168,6 +177,10 @@ export function SuperChatScreen() {
             thinkingByModel={selection.thinkingByModel}
             onModelSelect={handleModelSelect}
             onThinkingChange={selectThinkingLevel}
+            status={status}
+            error={error}
+            reload={reload}
+            isStreaming={isStreaming}
           />
         </View>
       </Animated.View>

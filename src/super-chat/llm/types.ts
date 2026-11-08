@@ -13,7 +13,14 @@ export type ChatStreamEvent =
   | { type: 'reasoning-delta'; text: string }
   | { type: 'text-delta'; text: string }
   | { type: 'done'; finishReason: string | null; usage?: ChatUsage }
-  | { type: 'error'; code: ChatErrorCode; message: string; retryable: boolean };
+  | {
+      type: 'error';
+      code: ChatErrorCode;
+      message: string;
+      retryable: boolean;
+      /** Raw transport text, for logs only — never rendered. */
+      debugMessage?: string;
+    };
 
 export type ProviderModel = {
   id: string;

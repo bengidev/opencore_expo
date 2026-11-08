@@ -130,7 +130,12 @@ test('malformed JSON is ignored', () => {
 test('a top-level error chunk emits one error and terminates', () => {
   const parser = createChatChunkParser();
   assert.deepEqual(parser.push('{"error":{"code":429,"message":"slow down"}}'), [
-    { type: 'error', code: 'rate-limit', message: 'slow down', retryable: true },
+    {
+      type: 'error',
+      code: 'rate-limit',
+      message: 'OpenRouter is rate-limiting free models. Try again shortly.',
+      retryable: true,
+    },
   ]);
   assert.deepEqual(parser.push('{"choices":[{"delta":{"content":"late"}}]}'), []);
   assert.deepEqual(parser.push('[DONE]'), []);
@@ -140,7 +145,12 @@ test('a top-level error chunk emits one error and terminates', () => {
 test('a stream error type without a numeric code is mapped', () => {
   const parser = createChatChunkParser();
   assert.deepEqual(parser.push('{"error":{"type":"rate_limit_exceeded","message":"slow down"}}'), [
-    { type: 'error', code: 'rate-limit', message: 'slow down', retryable: true },
+    {
+      type: 'error',
+      code: 'rate-limit',
+      message: 'OpenRouter is rate-limiting free models. Try again shortly.',
+      retryable: true,
+    },
   ]);
 });
 
@@ -160,14 +170,21 @@ test('maps HTTP status to a code and retryability', () => {
   assert.equal(errorFromResponse(503, {}).code, 'provider');
   assert.equal(errorFromResponse(503, {}).retryable, true);
   assert.equal(errorFromResponse(400, {}).code, 'unknown');
-  assert.match(errorFromResponse(429, { error: { message: 'slow down' } }).message, /slow down/);
+  // The curated sentence leads; provider text is only kept for `provider`.
+  assert.equal(
+    errorFromResponse(429, { error: { message: 'slow down' } }).message,
+    'OpenRouter is rate-limiting free models. Try again shortly.',
+  );
 });
 
 test('maps a stream error type and code without inspecting the message', () => {
   assert.equal(errorFromChunk({ type: 'rate_limit_exceeded', message: 'slow' }).code, 'rate-limit');
   assert.equal(errorFromChunk({ code: '402', message: 'no funds' }).code, 'credits');
   assert.equal(errorFromChunk({ type: 'authentication_error' }).code, 'invalid-key');
-  assert.equal(errorFromChunk({ type: 'server_error', message: 'oops' }).message, 'oops');
+  assert.equal(
+    errorFromChunk({ type: 'server_error', message: 'oops' }).message,
+    'OpenRouter could not answer. Try again. (oops)',
+  );
   assert.equal(errorFromChunk({ type: 'server_error' }).retryable, true);
   assert.equal(errorFromChunk({ message: 'Failed to generate' }).code, 'provider');
 });

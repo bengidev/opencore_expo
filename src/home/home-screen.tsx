@@ -43,7 +43,8 @@ export function HomeScreen() {
     reservedBottom,
   );
   const [draft, setDraft] = useState('');
-  const { models, selectedModel, selection, selectModel } = useModelCatalog();
+  const { models, selectedModel, selection, selectModel, status, error, reload } =
+    useModelCatalog();
   const homeModels = useMemo(() => models.map(toHomeModel), [models]);
 
   const handleModelSelect = useCallback(
@@ -123,6 +124,10 @@ export function HomeScreen() {
                   thinkingByModel={selection.thinkingByModel}
                   onModelSelect={handleModelSelect}
                   onThinkingChange={selectThinkingLevel}
+                  status={status}
+                  error={error}
+                  reload={reload}
+                  isStreaming={false}
                 />
               </Animated.View>
             </View>

@@ -114,7 +114,8 @@ test('a provider throw keeps the streamed deltas and ends with one retryable err
   assert.equal(events.length, 2);
   assert.equal(events[1].type, 'error');
   assert.equal(events[1].code, 'network');
-  assert.equal(events[1].message, 'fetch exploded');
+  assert.equal(events[1].message, 'The connection dropped before the reply finished.');
+  assert.equal(events[1].debugMessage, 'fetch exploded');
   assert.equal(events[1].retryable, true);
 });
 

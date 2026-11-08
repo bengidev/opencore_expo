@@ -1,4 +1,5 @@
 import {
+  Box,
   Column,
   DropdownMenu,
   DropdownMenuItem,
@@ -16,8 +17,10 @@ import {
   clip,
   clickable,
   fillMaxWidth,
+  height,
   padding,
   Shapes,
+  size,
   weight,
 } from '@expo/ui/jetpack-compose/modifiers';
 import * as Haptics from 'expo-haptics';
@@ -37,12 +40,16 @@ import {
   type ThinkingLevel,
 } from '@/super-chat/composer/chat-models';
 import { clampThinkingLevel } from '@/super-chat/llm/thinking';
+import type { ModelCatalogStatus } from '@/super-chat/llm/use-model-catalog';
 
 type ComposerModelSheetProps = {
   models: readonly HomeModel[];
   selectedId: string;
   /** Thinking level per model id, owned by the screen. */
   thinkingByModel: Record<string, ThinkingLevel>;
+  status: ModelCatalogStatus;
+  error: string | null;
+  reload: () => void;
   variant?: ComposerControlVariant;
   onThinkingChange: (modelId: string, level: ThinkingLevel) => void;
   onSelect: (id: string) => void;
@@ -56,6 +63,7 @@ const MODEL_ICONS: Record<HomeModelAndroidIcon, ImageSourcePropType> = {
   code: require('@expo/material-symbols/code.xml'),
   globe: require('@expo/material-symbols/globe.xml'),
   psychology: require('@expo/material-symbols/psychology.xml'),
+  auto_awesome_mosaic: require('@expo/material-symbols/auto_awesome_mosaic.xml'),
   chat: require('@expo/material-symbols/chat.xml'),
 };
 
@@ -85,6 +93,8 @@ export function ComposerModelSheet({
   models,
   selectedId,
   thinkingByModel,
+  status,
+  reload,
   variant,
   onThinkingChange,
   onSelect,
@@ -128,6 +138,8 @@ export function ComposerModelSheet({
         variant={variant}
         onPress={() => {
           setQuery('');
+          // A fallback row is a stand-in, not a catalogue: retry on open.
+          if (status === 'fallback') reload();
           setIsOpen(true);
         }}
       />
@@ -179,6 +191,64 @@ export function ComposerModelSheet({
                 style={{ fontSize: 12 }}>
                 Sets the speed and depth of every reply.
               </Text>
+              {status === 'fallback' ? (
+                <Row
+                  verticalAlignment="center"
+                  horizontalArrangement={{ spacedBy: 8 }}
+                  modifiers={[fillMaxWidth(), padding(0, 0, 0, 8)]}>
+                  <Text color={theme.textSecondary} style={{ fontSize: 12 }}>
+                    {"Couldn't load the live catalogue."}
+                  </Text>
+                  <Row
+                    verticalAlignment="center"
+                    modifiers={[
+                      clip(Shapes.RoundedCorner(999)),
+                      background(theme.surfaceRaised),
+                      padding(10, 4, 10, 4),
+                      clickable(reload),
+                    ]}>
+                    <Text
+                      color={theme.textDisplay}
+                      style={{ fontSize: 12, fontWeight: '600' }}>
+                      Try again
+                    </Text>
+                  </Row>
+                </Row>
+              ) : null}
+              {status === 'loading' ? (
+                <Column
+                  verticalArrangement={{ spacedBy: 8 }}
+                  modifiers={[fillMaxWidth(), padding(0, 8, 0, 0)]}>
+                  {[0, 1, 2].map((row) => (
+                    <Row
+                      key={row}
+                      verticalAlignment="center"
+                      horizontalArrangement={{ spacedBy: 12 }}
+                      modifiers={[
+                        fillMaxWidth(),
+                        height(56),
+                        clip(Shapes.RoundedCorner(14)),
+                        background(theme.surfaceRaised),
+                        padding(12, 12, 12, 12),
+                      ]}>
+                      <Box
+                        modifiers={[
+                          size(20, 20),
+                          clip(Shapes.RoundedCorner(6)),
+                          background(theme.border),
+                        ]}
+                      />
+                      <Box
+                        modifiers={[
+                          size(140, 14),
+                          clip(Shapes.RoundedCorner(7)),
+                          background(theme.border),
+                        ]}
+                      />
+                    </Row>
+                  ))}
+                </Column>
+              ) : (
               <LazyColumn modifiers={[fillMaxWidth(), weight(1)]}>
                 {visibleModels.map((model) => {
                   const level = clampThinkingLevel(
@@ -277,6 +347,7 @@ export function ComposerModelSheet({
                   );
                 })}
               </LazyColumn>
+              )}
             </Column>
           </ModalBottomSheet>
         </Host>

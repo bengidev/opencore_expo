@@ -128,6 +128,7 @@ export type HomeModelAndroidIcon =
   | 'code'
   | 'globe'
   | 'psychology'
+  | 'auto_awesome_mosaic'
   | 'chat';
 
 type ModelVisual = {
@@ -137,9 +138,8 @@ type ModelVisual = {
 
 /** The capability that gives a model its icon, most specific first. */
 const MODEL_VISUALS: readonly { capability: ModelCapabilityId; visual: ModelVisual }[] = [
+  { capability: 'reasoning', visual: { iosSymbol: 'brain', androidIcon: 'psychology' } },
   { capability: 'image', visual: { iosSymbol: 'photo', androidIcon: 'image' } },
-  { capability: 'video', visual: { iosSymbol: 'video', androidIcon: 'videocam' } },
-  { capability: 'audio', visual: { iosSymbol: 'waveform', androidIcon: 'graphic_eq' } },
   {
     capability: 'documents',
     visual: { iosSymbol: 'doc.text', androidIcon: 'description' },
@@ -152,10 +152,14 @@ const MODEL_VISUALS: readonly { capability: ModelCapabilityId; visual: ModelVisu
     },
   },
   { capability: 'web', visual: { iosSymbol: 'globe', androidIcon: 'globe' } },
-  { capability: 'reasoning', visual: { iosSymbol: 'brain', androidIcon: 'psychology' } },
+  { capability: 'audio', visual: { iosSymbol: 'waveform', androidIcon: 'graphic_eq' } },
+  { capability: 'video', visual: { iosSymbol: 'video', androidIcon: 'videocam' } },
 ];
 
-const DEFAULT_MODEL_VISUAL: ModelVisual = { iosSymbol: 'bubble.left', androidIcon: 'chat' };
+const DEFAULT_MODEL_VISUAL: ModelVisual = {
+  iosSymbol: 'sparkles',
+  androidIcon: 'auto_awesome_mosaic',
+};
 
 function visualFor(model: ProviderModel): ModelVisual {
   return (

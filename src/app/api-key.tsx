@@ -101,6 +101,14 @@ export default function ApiKeyScreen() {
   const clearInFlight = useRef(false);
   const mountedRef = useRef(true);
 
+  /** The unverified-save timer must not close the sheet while the user edits. */
+  const clearCloseTimer = useCallback(() => {
+    if (closeTimer.current !== null) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  }, []);
+
   useEffect(() => {
     mountedRef.current = true;
 
@@ -138,12 +146,14 @@ export default function ApiKeyScreen() {
   const showDefaultKey = keyStatus?.source === 'override';
 
   const handleChange = useCallback((value: string) => {
+    clearCloseTimer();
     setDraft(value);
     // An old verdict belongs to the old draft; do not let it label this one.
     setStatus((current) => (current.kind === 'idle' ? current : { kind: 'idle' }));
-  }, []);
+  }, [clearCloseTimer]);
 
   const handleSave = useCallback(async () => {
+    clearCloseTimer();
     // The state update lands a render later, so a second tap in the same frame
     // would still see `busy === false`; the ref closes that window.
     if (saveInFlight.current) return;
@@ -216,9 +226,10 @@ export default function ApiKeyScreen() {
       saveInFlight.current = false;
       setSubmitting(false);
     }
-  }, [busy, draft]);
+  }, [busy, clearCloseTimer, draft]);
 
   const handleUseDefault = useCallback(async () => {
+    clearCloseTimer();
     if (clearInFlight.current || busy) return;
 
     clearInFlight.current = true;
@@ -240,7 +251,7 @@ export default function ApiKeyScreen() {
 
     void Haptics.selectionAsync().catch(() => {});
     router.back();
-  }, [busy]);
+  }, [busy, clearCloseTimer]);
 
   return (
     <ThemedView style={styles.screen}>

@@ -57,7 +57,8 @@ function readCapabilities(model: Record<string, unknown>, id: string): ModelCapa
   }
 
   const parameters = asStringSet(model.supported_parameters);
-  if (parameters.has('tools')) capabilities.add('code');
+  const name = asString(model.name) ?? '';
+  if (/cod(e|er)/i.test(`${id} ${name}`)) capabilities.add('code');
   if (id.endsWith(':online')) capabilities.add('web');
   if (asRecord(model.reasoning) !== null || parameters.has('reasoning')) {
     capabilities.add('reasoning');
@@ -104,6 +105,7 @@ export function toFreeProviderModels(payload: unknown): ProviderModel[] {
     const aDefault = a.id === FREE_DEFAULT_MODEL_ID;
     const bDefault = b.id === FREE_DEFAULT_MODEL_ID;
     if (aDefault !== bDefault) return aDefault ? -1 : 1;
+    if (a.contextLength !== b.contextLength) return b.contextLength - a.contextLength;
     return a.label.localeCompare(b.label);
   });
 }
@@ -112,7 +114,7 @@ export function openRouterFallbackModels(): ProviderModel[] {
   return [
     {
       id: FREE_DEFAULT_MODEL_ID,
-      label: 'OpenRouter Free',
+      label: 'Free Models Router',
       description: 'Free models, routed automatically.',
       contextLength: 200_000,
       capabilities: ['text', 'image', 'reasoning'],

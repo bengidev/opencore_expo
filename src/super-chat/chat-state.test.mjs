@@ -214,3 +214,22 @@ test('done ends a reasoning-only reply instead of leaving the trace streaming', 
   assert.equal(done[0].streaming, false);
   assert.equal(done[0].text, '');
 });
+
+test('an error after a reasoning delta settles the trace duration', () => {
+  const start = [createChatMessage('assistant', '', { streaming: true })];
+  const id = start[0].id;
+  const reasoning = applyStreamEvent(start, id, { type: 'reasoning-delta', text: 'hm' });
+  assert.equal(reasoning[0].reasoningStreaming, true);
+
+  const failed = applyStreamEvent(
+    reasoning,
+    id,
+    { type: 'error', code: 'network', message: 'dropped', retryable: true },
+    3,
+  );
+
+  assert.equal(failed[0].reasoningStreaming, false);
+  assert.equal(failed[0].reasoningDuration, 3);
+  assert.equal(failed[0].streaming, false);
+  assert.equal(failed[0].error?.code, 'network');
+});

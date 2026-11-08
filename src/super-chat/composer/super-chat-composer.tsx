@@ -17,6 +17,7 @@ import { ComposerActionsPopover } from '@/super-chat/composer/composer-actions-p
 import { ComposerModelSheet } from '@/super-chat/composer/composer-model-sheet';
 import { ComposerSendButton } from '@/super-chat/composer/composer-send-button';
 import { normalizeComposerDraft } from '@/super-chat/composer-state';
+import type { ModelCatalogStatus } from '@/super-chat/llm/use-model-catalog';
 
 export type SuperChatComposerProps = {
   draft: string;
@@ -31,6 +32,14 @@ export type SuperChatComposerProps = {
   thinkingByModel: Record<string, ThinkingLevel>;
   onModelSelect: (id: string) => void;
   onThinkingChange: (modelId: string, level: ThinkingLevel) => void;
+  /** Catalogue state, so the sheet can show skeletons or a retry row. */
+  status: ModelCatalogStatus;
+  /** Why the catalogue fell back, when it did. */
+  error: string | null;
+  /** Refetches the catalogue after a failure. */
+  reload: () => void;
+  /** True while a reply is streaming; blocks a second send. */
+  isStreaming: boolean;
   translucent?: boolean;
 };
 
@@ -44,6 +53,10 @@ export function SuperChatComposer({
   thinkingByModel,
   onModelSelect,
   onThinkingChange,
+  status,
+  error,
+  reload,
+  isStreaming,
   translucent = false,
 }: SuperChatComposerProps) {
   const theme = useTheme();
@@ -105,6 +118,9 @@ export function SuperChatComposer({
           models={models}
           selectedId={modelId}
           thinkingByModel={thinkingByModel}
+          status={status}
+          error={error}
+          reload={reload}
           onThinkingChange={onThinkingChange}
           onSelect={handleModelSelect}
         />
@@ -118,7 +134,7 @@ export function SuperChatComposer({
           <AppIcon ios="mic" android="mic" size={22} color={theme.textDisplay} />
         </Pressable>
         <ComposerSendButton
-          enabled={Boolean(trimmed)}
+          enabled={Boolean(trimmed) && !isStreaming}
           metalActive={!reducedMotion}
           onPress={handleSend}
         />

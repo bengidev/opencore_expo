@@ -16,7 +16,7 @@ const ENTER_MS = 200;
 /** Brief pause so the assistant reply reads as a follow-up, not simultaneous with the user send. */
 const ASSISTANT_ENTER_DELAY_MS = 55;
 
-/** The key editor modal; also the destination of the "Open settings" action. */
+/** The key editor modal; also the destination of the "Add an API key" action. */
 const API_KEY_ROUTE = '/api-key';
 
 const KEY_ERRORS: ReadonlySet<ChatErrorCode> = new Set<ChatErrorCode>([
@@ -155,7 +155,7 @@ export const MessageBubble = memo(function MessageBubble({ message, onRetry }: M
                 style={styles.action}
                 onPress={() => router.push(API_KEY_ROUTE)}>
                 <ThemedText type="link" themeColor="interactive">
-                  Open settings
+                  Add an API key
                 </ThemedText>
               </Pressable>
             ) : null}

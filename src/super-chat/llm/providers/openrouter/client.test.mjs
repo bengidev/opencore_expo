@@ -72,8 +72,28 @@ test('posts the request with auth, content type, model, and signal', async () =>
   const headers = new Headers(seen.init.headers);
   assert.equal(headers.get('authorization'), 'Bearer sk-or-test');
   assert.equal(headers.get('content-type'), 'application/json');
+  // OpenRouter uses these to attribute free-tier traffic.
+  assert.equal(headers.get('http-referer'), 'https://opencore.app');
+  assert.equal(headers.get('x-openrouter-title'), 'OpenCore');
   assert.equal(JSON.parse(seen.init.body).model, 'openrouter/free');
   assert.equal(seen.init.signal, controller.signal);
+});
+
+test('lists models with the saved key when one is present', async () => {
+  let seen = null;
+  const fakeFetch = async (input, init) => {
+    seen = { input, init };
+    return new Response(JSON.stringify({ data: [] }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+
+  const models = await listOpenRouterModels({ apiKey: 'sk-or-test', fetch: fakeFetch });
+  assert.equal(seen.input, 'https://openrouter.ai/api/v1/models');
+  assert.equal(new Headers(seen.init?.headers).get('authorization'), 'Bearer sk-or-test');
+  // An empty catalogue is a failed catalogue: the caller keeps its fallback row.
+  assert.deepEqual(models.map((model) => model.id), ['openrouter/free']);
 });
 
 test('missing key fails before touching the network', async () => {

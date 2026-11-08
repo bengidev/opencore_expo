@@ -168,12 +168,19 @@ export function applyStreamEvent(
       return finishAssistantReply(staged, id);
     }
 
-    case 'error':
-      return failAssistantReply(messages, id, {
+    case 'error': {
+      // An error can land mid-trace; settle the duration the same way `done`
+      // does so the reasoning panel stops shimmering.
+      const target = messages.find((message) => message.id === id);
+      const staged = target?.reasoningStreaming
+        ? startAssistantAnswer(messages, id, elapsedSeconds ?? 1)
+        : messages;
+      return failAssistantReply(staged, id, {
         code: event.code,
         message: event.message,
         retryable: event.retryable,
       });
+    }
   }
 }
 

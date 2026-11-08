@@ -68,6 +68,15 @@ function readReasoningText(delta: Record<string, unknown>): string | null {
   return text.length > 0 ? text : null;
 }
 
+const MAX_PROVIDER_DETAIL = 200;
+
+/** Curated copy leads; raw provider text only trails a provider failure. */
+function withProviderDetail(message: string, detail: string | null): string {
+  const trimmed = detail?.trim() ?? '';
+  if (trimmed.length === 0) return message;
+  return `${message} (${trimmed.slice(0, MAX_PROVIDER_DETAIL)})`;
+}
+
 function providerDetail(body: unknown): {
   message: string | null;
   type: string | null;
@@ -181,8 +190,6 @@ function errorEvent(code: ChatErrorCode, message: string, retryable: boolean): C
 export function errorFromChunk(error: unknown): ChatErrorEvent {
   const detail = asRecord(error);
   const providerMessage = asString(detail?.message);
-  const message = (fallback: string): string =>
-    providerMessage !== null && providerMessage.length > 0 ? providerMessage : fallback;
 
   const code = detail?.code;
   const status = typeof code === 'number' && Number.isFinite(code)
@@ -195,30 +202,30 @@ export function errorFromChunk(error: unknown): ChatErrorEvent {
   const codeText = typeof code === 'string' ? code.toLowerCase() : '';
   const tokens = [type, codeText].filter((token) => token.length > 0);
 
-  if (status === 401) return errorEvent('invalid-key', message(INVALID_KEY_MESSAGE), false);
-  if (status === 402) return errorEvent('credits', message(CREDITS_MESSAGE), false);
-  if (status === 429) return errorEvent('rate-limit', message(RATE_LIMIT_MESSAGE), true);
+  if (status === 401) return errorEvent('invalid-key', INVALID_KEY_MESSAGE, false);
+  if (status === 402) return errorEvent('credits', CREDITS_MESSAGE, false);
+  if (status === 429) return errorEvent('rate-limit', RATE_LIMIT_MESSAGE, true);
 
   if (tokens.some((token) => token.startsWith('rate_limit') || token === 'rate-limit')) {
-    return errorEvent('rate-limit', message(RATE_LIMIT_MESSAGE), true);
+    return errorEvent('rate-limit', RATE_LIMIT_MESSAGE, true);
   }
   if (tokens.some((token) => token.startsWith('credit') || token === 'insufficient_quota')) {
-    return errorEvent('credits', message(CREDITS_MESSAGE), false);
+    return errorEvent('credits', CREDITS_MESSAGE, false);
   }
   if (tokens.some((token) => token.startsWith('auth') || token.startsWith('invalid'))) {
-    return errorEvent('invalid-key', message(INVALID_KEY_MESSAGE), false);
+    return errorEvent('invalid-key', INVALID_KEY_MESSAGE, false);
   }
-  return errorEvent('provider', message(PROVIDER_MESSAGE), true);
+  return errorEvent('provider', withProviderDetail(PROVIDER_MESSAGE, providerMessage), true);
 }
 
 export function errorFromResponse(status: number, body: unknown): ChatErrorEvent {
   const detail = providerDetail(body);
-  const message = (fallback: string): string =>
-    detail.message !== null && detail.message.length > 0 ? detail.message : fallback;
 
-  if (status === 401) return errorEvent('invalid-key', message(INVALID_KEY_MESSAGE), false);
-  if (status === 402) return errorEvent('credits', message(CREDITS_MESSAGE), false);
-  if (status === 429) return errorEvent('rate-limit', message(RATE_LIMIT_MESSAGE), true);
-  if (status >= 500) return errorEvent('provider', message(PROVIDER_MESSAGE), true);
-  return errorEvent('unknown', message(UNKNOWN_MESSAGE), false);
+  if (status === 401) return errorEvent('invalid-key', INVALID_KEY_MESSAGE, false);
+  if (status === 402) return errorEvent('credits', CREDITS_MESSAGE, false);
+  if (status === 429) return errorEvent('rate-limit', RATE_LIMIT_MESSAGE, true);
+  if (status >= 500) {
+    return errorEvent('provider', withProviderDetail(PROVIDER_MESSAGE, detail.message), true);
+  }
+  return errorEvent('unknown', UNKNOWN_MESSAGE, false);
 }

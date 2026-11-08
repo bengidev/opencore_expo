@@ -3,6 +3,10 @@ import assert from 'node:assert/strict';
 
 import { clampThinkingLevel, defaultThinkingLevelFor, normalizeThinkingLevels } from './thinking.ts';
 
+test('maps the minimal effort onto the low level', () => {
+  assert.deepEqual(normalizeThinkingLevels(['minimal']), ['low']);
+});
+
 test('keeps only known levels in canonical order', () => {
   assert.deepEqual(normalizeThinkingLevels(['max', 'none', 'low', 'turbo']), ['low', 'max']);
   assert.deepEqual(normalizeThinkingLevels(undefined), []);

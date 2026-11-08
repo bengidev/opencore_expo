@@ -6,8 +6,9 @@ export function normalizeThinkingLevels(raw: unknown): ThinkingLevel[] {
   if (!Array.isArray(raw)) return [];
   const known = new Set<string>(THINKING_LEVELS);
   const seen = new Set<string>();
+  const levels = raw.map((level) => (level === 'minimal' ? 'low' : level));
   return THINKING_LEVELS.filter((level) => {
-    if (!raw.includes(level) || !known.has(level) || seen.has(level)) return false;
+    if (!levels.includes(level) || !known.has(level) || seen.has(level)) return false;
     seen.add(level);
     return true;
   });
