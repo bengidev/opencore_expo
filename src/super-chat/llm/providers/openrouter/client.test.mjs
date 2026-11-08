@@ -83,17 +83,25 @@ test('lists models with the saved key when one is present', async () => {
   let seen = null;
   const fakeFetch = async (input, init) => {
     seen = { input, init };
-    return new Response(JSON.stringify({ data: [] }), {
-      status: 200,
-      headers: { 'content-type': 'application/json' },
-    });
+    return new Response(
+      JSON.stringify({
+        data: [
+          {
+            id: 'z/model:free',
+            name: 'Zeta',
+            pricing: { prompt: '0', completion: '0' },
+            architecture: { input_modalities: ['text'] },
+          },
+        ],
+      }),
+      { status: 200, headers: { 'content-type': 'application/json' } },
+    );
   };
 
   const models = await listOpenRouterModels({ apiKey: 'sk-or-test', fetch: fakeFetch });
   assert.equal(seen.input, 'https://openrouter.ai/api/v1/models');
   assert.equal(new Headers(seen.init?.headers).get('authorization'), 'Bearer sk-or-test');
-  // An empty catalogue is a failed catalogue: the caller keeps its fallback row.
-  assert.deepEqual(models.map((model) => model.id), ['openrouter/free']);
+  assert.deepEqual(models.map((model) => model.id), ['z/model:free']);
 });
 
 test('missing key fails before touching the network', async () => {
@@ -149,20 +157,30 @@ test('an error thrown in by the consumer propagates instead of becoming a networ
   assert.notEqual(controllerRef, null);
 });
 
-test('a failed catalogue fetch falls back to the callable row', async (t) => {
-  const cases = [
-    ['a throw', async () => { throw new Error('offline'); }],
-    ['a non-ok status', async () => new Response('{}', { status: 500 })],
-    ['malformed JSON', async () => new Response('not json', { status: 200 })],
-    ['an empty catalogue', async () => new Response(JSON.stringify({ data: [] }), { status: 200 })],
-  ];
+test('a non-ok catalogue response rejects', async () => {
+  await assert.rejects(
+    listOpenRouterModels({ fetch: async () => new Response('{}', { status: 503 }) }),
+    /503/,
+  );
+});
 
-  for (const [name, fakeFetch] of cases) {
-    await t.test(name, async () => {
-      const models = await listOpenRouterModels({ fetch: fakeFetch });
-      assert.deepEqual(models.map((model) => model.id), ['openrouter/free']);
-    });
-  }
+test('an empty catalogue rejects', async () => {
+  await assert.rejects(
+    listOpenRouterModels({
+      fetch: async () => new Response(JSON.stringify({ data: [] }), { status: 200 }),
+    }),
+    /no free models/i,
+  );
+});
+
+test('an unreadable catalogue rejects instead of resolving a stand-in', async () => {
+  await assert.rejects(
+    listOpenRouterModels({ fetch: async () => { throw new Error('offline'); } }),
+    /offline/,
+  );
+  await assert.rejects(
+    listOpenRouterModels({ fetch: async () => new Response('not json', { status: 200 }) }),
+  );
 });
 
 test('checkKey reports invalid and valid', async () => {

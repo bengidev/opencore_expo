@@ -139,6 +139,26 @@ export function SuperChatScreen() {
   }, [abort, commit]);
 
   /**
+   * Stop the live reply the same way a new message interrupts it: abort the
+   * transport, then settle the message the stream was filling so neither the
+   * reasoning shimmer nor the pending answer outlives it.
+   */
+  const handleStop = useCallback(() => {
+    abort();
+    const active = activeReplyRef.current;
+    activeReplyRef.current = null;
+    if (active) {
+      commit(
+        settleAssistantReply(
+          messagesRef.current,
+          active.id,
+          elapsedSeconds(active.startedAt),
+        ),
+      );
+    }
+  }, [abort, commit]);
+
+  /**
    * Retry the newest reply only: earlier answers have turns after them, so
    * re-running one would ask the provider to invent over settled history.
    */
@@ -183,7 +203,7 @@ export function SuperChatScreen() {
             reload={reload}
             retryOnOpen={retryOnOpen}
             isStreaming={isStreaming}
-            onStop={abort}
+            onStop={handleStop}
           />
         </View>
       </Animated.View>

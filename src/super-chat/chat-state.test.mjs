@@ -106,6 +106,23 @@ test('settling an interrupted reply does not overwrite a measured duration', () 
   assert.equal(interrupted[0].reasoningDuration, 2);
 });
 
+test('settling a stopped reply clears both streams and records the duration', () => {
+  const stop = {
+    id: 'reply-1',
+    role: 'assistant',
+    text: '',
+    streaming: true,
+    reasoning: 'Pertimbangan.',
+    reasoningStreaming: true,
+  };
+
+  const settled = settleAssistantReply([stop], stop.id, 4);
+  assert.equal(settled[0].streaming, false);
+  assert.equal(settled[0].reasoningStreaming, false);
+  assert.equal(settled[0].reasoningDuration, 4);
+  assert.equal(settled[0].text, '');
+});
+
 test('reads and trims the first seed, rejecting missing or blank values', () => {
   assert.equal(readChatSeed(undefined), null);
   assert.equal(readChatSeed('  '), null);

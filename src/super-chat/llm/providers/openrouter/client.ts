@@ -7,7 +7,7 @@ import type {
   ProviderContext,
   ProviderModel,
 } from '../../types.ts';
-import { openRouterFallbackModels, toFreeProviderModels } from './catalog.ts';
+import { toFreeProviderModels } from './catalog.ts';
 import {
   buildChatRequest,
   createChatChunkParser,
@@ -141,29 +141,29 @@ export async function* streamOpenRouterChat(
 }
 
 /**
- * Lists the free OpenRouter models, falling back to the callable default row
- * whenever the catalogue cannot be read. Never rejects.
+ * Lists the free OpenRouter models. Rejects when the catalogue cannot be read
+ * - transport failure, non-ok response, a body without free rows - so the
+ * caller can tell a failed fetch from a genuinely small live list and show its
+ * own fallback row. There is no retry loop here: the caller's retry control
+ * owns when to ask again.
  */
 export async function listOpenRouterModels(
   context: ModelListContext,
 ): Promise<ProviderModel[]> {
-  try {
-    const headers =
-      context.apiKey != null && context.apiKey.length > 0
-        ? { Authorization: `Bearer ${context.apiKey}` }
-        : undefined;
-    const response = await context.fetch(`${API_BASE_URL}/models`, { headers });
-    if (!response.ok) {
-      await discardBody(response);
-      return openRouterFallbackModels();
-    }
-
-    const payload: unknown = await response.json();
-    const models = toFreeProviderModels(payload);
-    return models.length > 0 ? models : openRouterFallbackModels();
-  } catch {
-    return openRouterFallbackModels();
+  const headers =
+    context.apiKey != null && context.apiKey.length > 0
+      ? { Authorization: `Bearer ${context.apiKey}` }
+      : undefined;
+  const response = await context.fetch(`${API_BASE_URL}/models`, { headers });
+  if (!response.ok) {
+    await discardBody(response);
+    throw new Error(`OpenRouter catalogue request failed (${response.status}).`);
   }
+
+  const payload: unknown = await response.json();
+  const models = toFreeProviderModels(payload);
+  if (models.length === 0) throw new Error('OpenRouter returned no free models.');
+  return models;
 }
 
 /**

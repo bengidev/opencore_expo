@@ -74,7 +74,7 @@ export function SuperChatComposer({
   const sans = useFontFamily('sans');
   const trimmed = draft.trim();
   const actions = useMemo(
-    () => (isStreaming ? [...QUICK_ACTIONS, STOP_ACTION] : QUICK_ACTIONS),
+    () => (isStreaming ? [STOP_ACTION, ...QUICK_ACTIONS] : QUICK_ACTIONS),
     [isStreaming],
   );
 

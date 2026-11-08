@@ -32,6 +32,7 @@ const ANDROID_ICONS: Record<string, ImageSourcePropType> = {
   photo_library: require('@expo/material-symbols/photo_library.xml'),
   folder: require('@expo/material-symbols/folder.xml'),
   close: require('@expo/material-symbols/close.xml'),
+  stop: require('@expo/material-symbols/stop_circle.xml'),
   chat_bubble: require('@expo/material-symbols/chat_bubble.xml'),
 };
 

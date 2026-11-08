@@ -60,23 +60,38 @@ test('a rejected catalogue request settles into fallback', async () => {
   );
 });
 
-test('a provider resolving exactly the fallback row yields ready', async () => {
+test('a failed OpenRouter catalogue settles into fallback', async () => {
   const base = getProvider('openrouter');
-  const provider = {
-    ...base,
-    listModels: async () => [...base.fallbackModels],
-  };
 
-  const result = await loadModelCatalog(provider, {
-    fetch: async () => new Response(''),
+  // The shipped provider rejects on a non-ok response, so the hook's catch -
+  // not its payload check - is what turns this into 'fallback'.
+  const result = await loadModelCatalog(base, {
+    fetch: async () => new Response('{}', { status: 503 }),
   });
 
-  // A live answer is never inferred to be a failure from its ids: only a
-  // rejection flips the status, so a one-model catalogue stays usable.
-  assert.equal(result.kind, 'ready');
-  assert.equal(result.error, null);
+  assert.equal(result.kind, 'fallback');
+  assert.match(result.error ?? '', /503/);
   assert.deepEqual(
     result.models.map((model) => model.id),
     base.fallbackModels.map((model) => model.id),
   );
+});
+
+test('a live catalogue stays ready even when it repeats the fallback id', async () => {
+  const base = getProvider('openrouter');
+  const live = [
+    ...base.fallbackModels,
+    { ...base.fallbackModels[0], id: 'deepseek/deepseek-r1:free', label: 'DeepSeek R1' },
+  ];
+  const provider = { ...base, listModels: async () => live };
+
+  const result = await loadModelCatalog(provider, { fetch: async () => new Response('') });
+
+  // Status comes from settled success, never from comparing ids to the row.
+  assert.equal(result.kind, 'ready');
+  assert.equal(result.error, null);
+  assert.deepEqual(result.models.map((model) => model.id), [
+    'openrouter/free',
+    'deepseek/deepseek-r1:free',
+  ]);
 });
