@@ -133,6 +133,24 @@ export function settleAssistantReply(
 }
 
 /**
+ * A reply the user stopped before it produced anything has nothing to show
+ * once it stops streaming: remove the blank assistant bubble instead of
+ * leaving a silent gap in the thread. A partial answer or trace is kept.
+ */
+export function settleStoppedReply(
+  messages: ChatMessage[],
+  id: string,
+  reasoningDuration?: number,
+): ChatMessage[] {
+  const reply = messages.find((message) => message.id === id);
+  if (reply === undefined) return messages;
+  if (reply.text === '' && reply.reasoning === '') {
+    return messages.filter((message) => message.id !== id);
+  }
+  return settleAssistantReply(messages, id, reasoningDuration);
+}
+
+/**
  * The pure event→state mapping for a live reply. `elapsedSeconds` is the time
  * the trace has run so far, measured by the screen, and only matters on the
  * first answer delta — the transition out of the trace.

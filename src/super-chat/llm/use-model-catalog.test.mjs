@@ -2,7 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { getProvider } from './providers/index.ts';
-import { isFallbackList, loadModelCatalog } from './use-model-catalog.ts';
+import {
+  CATALOGUE_FAILED_MESSAGE,
+  isFallbackList,
+  loadModelCatalog,
+} from './use-model-catalog.ts';
 
 const fallback = [{ id: 'openrouter/free' }];
 
@@ -53,7 +57,7 @@ test('a rejected catalogue request settles into fallback', async () => {
   });
 
   assert.equal(result.kind, 'fallback');
-  assert.equal(result.error, 'offline');
+  assert.equal(result.error, CATALOGUE_FAILED_MESSAGE);
   assert.deepEqual(
     result.models.map((model) => model.id),
     base.fallbackModels.map((model) => model.id),
@@ -70,11 +74,27 @@ test('a failed OpenRouter catalogue settles into fallback', async () => {
   });
 
   assert.equal(result.kind, 'fallback');
-  assert.match(result.error ?? '', /503/);
+  assert.equal(result.error, CATALOGUE_FAILED_MESSAGE);
   assert.deepEqual(
     result.models.map((model) => model.id),
     base.fallbackModels.map((model) => model.id),
   );
+});
+
+test('a parser failure never leaks engine text into the caption', async () => {
+  const base = getProvider('openrouter');
+  const provider = {
+    ...base,
+    async listModels() {
+      throw new SyntaxError('JSON Parse error: Unexpected token < in JSON');
+    },
+  };
+
+  const result = await loadModelCatalog(provider, { fetch: async () => new Response('') });
+
+  assert.equal(result.kind, 'fallback');
+  assert.equal(result.error, CATALOGUE_FAILED_MESSAGE);
+  assert.doesNotMatch(result.error, /JSON Parse/);
 });
 
 test('a live catalogue stays ready even when it repeats the fallback id', async () => {

@@ -14,6 +14,7 @@ import {
   createInitialChatMessages,
   readChatSeed,
   settleAssistantReply,
+  settleStoppedReply,
 } from '@/super-chat/chat-state';
 import { createChatMessage, type ChatMessage } from '@/super-chat/chat-message';
 import { toChatTurns } from '@/super-chat/chat-turns';
@@ -149,7 +150,7 @@ export function SuperChatScreen() {
     activeReplyRef.current = null;
     if (active) {
       commit(
-        settleAssistantReply(
+        settleStoppedReply(
           messagesRef.current,
           active.id,
           elapsedSeconds(active.startedAt),

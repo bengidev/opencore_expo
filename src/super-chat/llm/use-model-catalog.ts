@@ -22,6 +22,13 @@ const MODEL_CACHE_MS = 10 * 60 * 1000;
 /** The sheet's automatic retry on open stays quiet for this long after a try. */
 const RETRY_GUARD_MS = 10 * 1000;
 
+/** What the composer shows when the catalogue request fails. */
+export const CATALOGUE_FAILED_MESSAGE =
+  "Couldn't reach OpenRouter. Check your connection and try again.";
+
+/** True only in React Native's dev builds; Node has no `__DEV__`. */
+const DEV = typeof __DEV__ !== 'undefined' && __DEV__;
+
 export type ModelCatalogStatus = 'loading' | 'ready' | 'fallback';
 
 type CachedCatalog = { at: number; models: ProviderModel[] };
@@ -51,10 +58,13 @@ export async function loadModelCatalog(
     const live = await provider.listModels(context);
     return { kind: 'ready', models: live, error: null };
   } catch (reason: unknown) {
+    // The raw reason can be engine text ("Network request failed", a JSON
+    // parser message); keep it in the dev log and render one curated sentence.
+    if (DEV) console.warn('[model-catalog]', reason);
     return {
       kind: 'fallback',
       models: [...provider.fallbackModels],
-      error: reason instanceof Error ? reason.message : String(reason),
+      error: CATALOGUE_FAILED_MESSAGE,
     };
   }
 }

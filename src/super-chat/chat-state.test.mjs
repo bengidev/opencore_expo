@@ -10,6 +10,7 @@ import {
   finishAssistantReply,
   readChatSeed,
   settleAssistantReply,
+  settleStoppedReply,
   startAssistantAnswer,
 } from './chat-state.ts';
 import { createChatMessage } from './chat-message.ts';
@@ -121,6 +122,33 @@ test('settling a stopped reply clears both streams and records the duration', ()
   assert.equal(settled[0].reasoningStreaming, false);
   assert.equal(settled[0].reasoningDuration, 4);
   assert.equal(settled[0].text, '');
+});
+
+test('stopping before the first token drops the empty assistant reply', () => {
+  const start = [
+    createChatMessage('user', 'hi'),
+    createChatMessage('assistant', '', { streaming: true }),
+  ];
+  const stopped = settleStoppedReply(start, start[1].id, 2);
+
+  assert.deepEqual(
+    stopped.map(({ role, text }) => ({ role, text })),
+    [{ role: 'user', text: 'hi' }],
+  );
+
+  const trace = [
+    createChatMessage('user', 'hi'),
+    createChatMessage('assistant', '', { streaming: true, reasoning: 'hmm' }),
+  ];
+  const kept = settleStoppedReply(trace, trace[1].id, 2);
+  assert.equal(kept.length, 2);
+  assert.equal(kept[1].streaming, false);
+  assert.equal(kept[1].reasoningStreaming, false);
+  assert.equal(kept[1].reasoning, 'hmm');
+  assert.equal(kept[1].reasoningDuration, 2);
+
+  // An unknown id is not a stop target.
+  assert.equal(settleStoppedReply(trace, 'missing', 2), trace);
 });
 
 test('reads and trims the first seed, rejecting missing or blank values', () => {
