@@ -10,7 +10,7 @@ import { useTheme } from '@/hooks/use-theme';
 import type { ChatMessage } from '@/super-chat/chat-message';
 import type { ChatErrorCode } from '@/super-chat/llm/types';
 import { ReasoningPanel } from '@/super-chat/reasoning-panel';
-import { StreamingMarkdown } from '@/super-chat/streaming-markdown';
+import { MarkdownAnswer } from '@/super-chat/markdown-answer';
 
 const ENTER_MS = 200;
 /** Brief pause so the assistant reply reads as a follow-up, not simultaneous with the user send. */
@@ -101,9 +101,9 @@ export const MessageBubble = memo(function MessageBubble({ message, onRetry }: M
               {message.text}
             </ThemedText>
           ) : (
-            <StreamingMarkdown
+            <MarkdownAnswer
               text={message.text}
-              animate={message.streaming && !reducedMotion}
+              streaming={message.streaming && !reducedMotion}
             />
           )}
         </View>
