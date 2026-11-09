@@ -16,6 +16,8 @@ const ORB_RADIUS = 18;
 
 type ComposerSendButtonProps = {
   enabled: boolean;
+  /** While a reply streams the primary control stops it instead of sending. */
+  mode?: 'send' | 'stop';
   metalActive: boolean;
   onPress: () => void;
 };
@@ -25,7 +27,13 @@ type ComposerSendButtonProps = {
  * Material fills a tonal circle on Android, and the app's own metal orb is only
  * painted when neither platform surface exists.
  */
-export function ComposerSendButton({ enabled, metalActive, onPress }: ComposerSendButtonProps) {
+export function ComposerSendButton({
+  enabled,
+  mode = 'send',
+  metalActive,
+  onPress,
+}: ComposerSendButtonProps) {
+  const isStop = mode === 'stop';
   const theme = useTheme();
   const reducedMotion = useReducedMotion();
   const [pressed, setPressed] = useState(false);
@@ -51,7 +59,7 @@ export function ComposerSendButton({ enabled, metalActive, onPress }: ComposerSe
     return (
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Send message"
+        accessibilityLabel={isStop ? 'Stop' : 'Send message'}
         accessibilityState={{ disabled: !enabled }}
         disabled={!enabled}
         onPress={onPress}
@@ -60,7 +68,12 @@ export function ComposerSendButton({ enabled, metalActive, onPress }: ComposerSe
         hitSlop={6}
         style={styles.sendHit}>
         <View style={[styles.sendOrb, { backgroundColor: orbFill }]}>
-          <AppIcon ios="arrow.up" android="arrow-upward" size={18} color={tint} />
+          <AppIcon
+            ios={isStop ? 'stop.fill' : 'arrow.up'}
+            android={isStop ? 'stop' : 'arrow-upward'}
+            size={18}
+            color={tint}
+          />
         </View>
       </Pressable>
     );

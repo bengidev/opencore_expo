@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { useReducedMotion } from 'react-native-reanimated';
 import { Reasoning } from 'panelui-native/components/reasoning';
 import { Shimmer } from 'panelui-native/components/shimmer';
 
@@ -7,7 +8,6 @@ import { ThemedText } from '@/components/themed-text';
 import { Fonts, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { StreamingText } from '@/super-chat/streaming-text';
-import { REASONING_WORD_STAGGER_MS } from '@/super-chat/streaming-timing';
 
 type ReasoningPanelProps = {
   text: string;
@@ -26,6 +26,7 @@ const AUTO_CLOSE_DELAY_MS = 1000;
 
 export function ReasoningPanel({ text, streaming, duration }: ReasoningPanelProps) {
   const theme = useTheme();
+  const reduced = useReducedMotion();
   const [open, setOpen] = useState(streaming);
   const manualToggleRef = useRef(false);
 
@@ -89,8 +90,7 @@ export function ReasoningPanel({ text, streaming, duration }: ReasoningPanelProp
           <View style={styles.trace}>
             <StreamingText
               text={text}
-              staggerMs={REASONING_WORD_STAGGER_MS}
-              animate={streaming}
+              animate={streaming && !reduced}
               style={[styles.traceText, { color: theme.textSecondary }]}
             />
           </View>

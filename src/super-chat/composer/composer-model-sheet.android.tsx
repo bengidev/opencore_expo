@@ -8,6 +8,7 @@ import {
   ListItem,
   ModalBottomSheet,
   OutlinedTextField,
+  RNHostView,
   Row,
   Text,
 } from '@expo/ui/jetpack-compose';
@@ -28,33 +29,44 @@ import { useMaterialTheme } from '@/hooks/use-material-theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { ComposerControlVariant } from '@/super-chat/composer/composer-actions-trigger';
 import { ComposerModelTrigger } from '@/super-chat/composer/composer-model-trigger';
+import { ModelSheetStatus } from '@/super-chat/composer/model-sheet-status';
 import {
   THINKING_LEVEL_LABELS,
-  defaultThinkingLevel,
   filterHomeModels,
   type HomeModel,
   type HomeModelAndroidIcon,
   type ModelCapabilityId,
   type ThinkingLevel,
 } from '@/super-chat/composer/chat-models';
+import { clampThinkingLevel } from '@/super-chat/llm/thinking';
+import type { ModelCatalogStatus } from '@/super-chat/llm/use-model-catalog';
 
 type ComposerModelSheetProps = {
   models: readonly HomeModel[];
   selectedId: string;
+  /** Thinking level per model id, owned by the screen. */
+  thinkingByModel: Record<string, ThinkingLevel>;
+  status: ModelCatalogStatus;
+  error: string | null;
+  /** Explicit retry: always refetches. */
+  reload: () => void;
+  /** Retry on open: skipped inside the hook's guard window. */
+  retryOnOpen: () => void;
   variant?: ComposerControlVariant;
+  onThinkingChange: (modelId: string, level: ThinkingLevel) => void;
   onSelect: (id: string) => void;
 };
 
 const MODEL_ICONS: Record<HomeModelAndroidIcon, ImageSourcePropType> = {
-  auto_awesome_mosaic: require('@expo/material-symbols/auto_awesome_mosaic.xml'),
-  bolt: require('@expo/material-symbols/bolt.xml'),
-  psychology: require('@expo/material-symbols/psychology.xml'),
-  image_search: require('@expo/material-symbols/image_search.xml'),
+  image: require('@expo/material-symbols/image.xml'),
+  videocam: require('@expo/material-symbols/videocam.xml'),
+  graphic_eq: require('@expo/material-symbols/graphic_eq.xml'),
+  description: require('@expo/material-symbols/description.xml'),
   code: require('@expo/material-symbols/code.xml'),
   globe: require('@expo/material-symbols/globe.xml'),
-  edit_note: require('@expo/material-symbols/edit_note.xml'),
-  analytics: require('@expo/material-symbols/analytics.xml'),
-  shield: require('@expo/material-symbols/shield.xml'),
+  psychology: require('@expo/material-symbols/psychology.xml'),
+  auto_awesome_mosaic: require('@expo/material-symbols/auto_awesome_mosaic.xml'),
+  chat: require('@expo/material-symbols/chat.xml'),
 };
 
 const SEARCH_ICON: ImageSourcePropType = require('@expo/material-symbols/search.xml');
@@ -82,7 +94,13 @@ const CAPABILITY_ICONS: Record<ModelCapabilityId, ImageSourcePropType> = {
 export function ComposerModelSheet({
   models,
   selectedId,
+  thinkingByModel,
+  status,
+  error,
+  reload,
+  retryOnOpen,
   variant,
+  onThinkingChange,
   onSelect,
 }: ComposerModelSheetProps) {
   const theme = useTheme();
@@ -92,10 +110,9 @@ export function ComposerModelSheet({
   const [query, setQuery] = useState('');
   /** Which model's thinking-level menu is expanded, if any. */
   const [levelMenuFor, setLevelMenuFor] = useState<string | null>(null);
-  const [thinkingByModel, setThinkingByModel] = useState<Record<string, ThinkingLevel>>({});
 
   const visibleModels = useMemo(() => filterHomeModels(models, query), [models, query]);
-  const selected = models.find((model) => model.id === selectedId) ?? models[0];
+  const selected = models.find((model) => model.id === selectedId) ?? models[0] ?? null;
 
   function close() {
     setIsOpen(false);
@@ -109,12 +126,14 @@ export function ComposerModelSheet({
   }
 
   function handleThinkingChange(modelId: string, level: ThinkingLevel) {
-    setThinkingByModel((current) =>
-      current[modelId] === level ? current : { ...current, [modelId]: level },
-    );
+    onThinkingChange(modelId, level);
     setLevelMenuFor(null);
     void Haptics.selectionAsync().catch(() => {});
   }
+
+  // An empty catalogue has nothing to trigger, and the chip must never render
+  // an undefined model.
+  if (selected === null) return null;
 
   return (
     <>
@@ -123,6 +142,8 @@ export function ComposerModelSheet({
         variant={variant}
         onPress={() => {
           setQuery('');
+          // A fallback row is a stand-in, not a catalogue: retry on open.
+          if (status === 'fallback') retryOnOpen();
           setIsOpen(true);
         }}
       />
@@ -174,9 +195,18 @@ export function ComposerModelSheet({
                 style={{ fontSize: 12 }}>
                 Sets the speed and depth of every reply.
               </Text>
+              {status === 'ready' ? null : (
+                <RNHostView matchContents={{ vertical: true }} modifiers={[fillMaxWidth()]}>
+                  <ModelSheetStatus status={status} error={error} onRetry={reload} />
+                </RNHostView>
+              )}
+              {status === 'loading' ? null : (
               <LazyColumn modifiers={[fillMaxWidth(), weight(1)]}>
                 {visibleModels.map((model) => {
-                  const level = thinkingByModel[model.id] ?? defaultThinkingLevel(model);
+                  const level = clampThinkingLevel(
+                    model.thinkingLevels,
+                    thinkingByModel[model.id],
+                  );
                   const isSelected = model.id === selectedId;
 
                   // The key carries the level: Compose's `LazyColumn` reuses rows whose
@@ -269,6 +299,7 @@ export function ComposerModelSheet({
                   );
                 })}
               </LazyColumn>
+              )}
             </Column>
           </ModalBottomSheet>
         </Host>

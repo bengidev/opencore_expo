@@ -6,14 +6,27 @@ import { MessageBubble } from '@/super-chat/message-bubble';
 import { Spacing } from '@/constants/theme';
 import type { ChatMessage } from '@/super-chat/chat-message';
 
-export function MessageList({ messages }: { messages: ChatMessage[] }) {
+export function MessageList({
+  messages,
+  onRetry,
+}: {
+  messages: ChatMessage[];
+  onRetry?: (id: string) => void;
+}) {
   const listRef = useRef<Animated.FlatList<ChatMessage>>(null);
   const followLatestRef = useRef(true);
   const lastUserMessageIdRef = useRef<string | null>(null);
   const listHeightRef = useRef(0);
   const scrollFrameRef = useRef<number | null>(null);
 
-  const renderItem: ListRenderItem<ChatMessage> = ({ item }) => <MessageBubble message={item} />;
+  // Retrying an earlier answer would have to discard the turns that followed
+  // it, so only the newest reply may restart.
+  const renderItem: ListRenderItem<ChatMessage> = ({ item, index }) => (
+    <MessageBubble
+      message={item}
+      onRetry={index === messages.length - 1 ? onRetry : undefined}
+    />
+  );
 
   useEffect(() => {
     return () => {

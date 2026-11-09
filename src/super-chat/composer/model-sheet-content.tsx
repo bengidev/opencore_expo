@@ -8,7 +8,6 @@ import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import {
   MODEL_CAPABILITIES,
-  defaultThinkingLevel,
   filterHomeModels,
   type HomeModel,
   type ModelCapabilityId,
@@ -27,7 +26,10 @@ import {
   THINKING_TRIGGER_HEIGHT,
   THINKING_TRIGGER_WIDTH,
 } from '@/super-chat/composer/model-sheet-metrics';
+import { ModelSheetStatus } from '@/super-chat/composer/model-sheet-status';
 import { ThinkingLevelControl } from '@/super-chat/composer/model-thinking-control';
+import { clampThinkingLevel } from '@/super-chat/llm/thinking';
+import type { ModelCatalogStatus } from '@/super-chat/llm/use-model-catalog';
 
 type ModelSheetContentProps = {
   models: readonly HomeModel[];
@@ -36,6 +38,11 @@ type ModelSheetContentProps = {
   /** Bumped by the sheet when it opens or closes, to clear any open overlay. */
   resetKey?: number;
   thinkingByModel: Record<string, ThinkingLevel>;
+  /** Loading shows skeleton rows; fallback keeps the rows and offers a retry. */
+  status: ModelCatalogStatus;
+  /** Why the catalogue fell back, when it did. */
+  error: string | null;
+  onRetry: () => void;
   onQueryChange: (query: string) => void;
   onThinkingChange: (modelId: string, level: ThinkingLevel) => void;
   onSelect: (id: string) => void;
@@ -52,6 +59,9 @@ export function ModelSheetContent({
   query,
   resetKey = 0,
   thinkingByModel,
+  status,
+  error,
+  onRetry,
   onQueryChange,
   onThinkingChange,
   onSelect,
@@ -127,51 +137,54 @@ export function ModelSheetContent({
         />
       </View>
 
-      <FlatList
-        data={visibleModels}
-        keyExtractor={(model) => model.id}
-        style={styles.list}
-        contentContainerStyle={styles.listContent}
-        nestedScrollEnabled
-        keyboardShouldPersistTaps="handled"
-        onScrollBeginDrag={dismissCapability}
-        ListHeaderComponent={
-          <View style={styles.listHeader}>
-            <ThemedText variant="subheading" themeColor="textDisplay">
-              Select a model
-            </ThemedText>
-            <ThemedText variant="caption" themeColor="textSecondary">
-              Sets the speed and depth of every reply.
-            </ThemedText>
-          </View>
-        }
-        renderItem={({ item }) => (
-          <ModelRow
-            model={item}
-            isSelected={item.id === selectedId}
-            thinkingLevel={
-              item.thinkingLevels.length > 0
-                ? (thinkingByModel[item.id] ?? defaultThinkingLevel(item))
-                : null
-            }
-            activeCapabilityId={
-              visibleTooltip?.anchor.modelId === item.id
-                ? visibleTooltip.anchor.capability
-                : null
-            }
-            onThinkingChange={onThinkingChange}
-            onShowCapability={showCapability}
-            onSelect={handleSelect}
-          />
-        )}
-        ListEmptyComponent={
-          <View style={styles.empty}>
-            <ThemedText variant="bodySm" themeColor="textSecondary">
-              No models match “{query.trim()}”.
-            </ThemedText>
-          </View>
-        }
-      />
+      <ModelSheetStatus status={status} error={error} onRetry={onRetry} />
+
+      {status === 'loading' ? null : (
+        <FlatList
+          data={visibleModels}
+          keyExtractor={(model) => model.id}
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          nestedScrollEnabled
+          keyboardShouldPersistTaps="handled"
+          onScrollBeginDrag={dismissCapability}
+          ListHeaderComponent={
+            <View style={styles.listHeader}>
+              <ThemedText variant="subheading" themeColor="textDisplay">
+                Select a model
+              </ThemedText>
+              <ThemedText variant="caption" themeColor="textSecondary">
+                Sets the speed and depth of every reply.
+              </ThemedText>
+            </View>
+          }
+          renderItem={({ item }) => (
+            <ModelRow
+              model={item}
+              isSelected={item.id === selectedId}
+              thinkingLevel={clampThinkingLevel(
+                item.thinkingLevels,
+                thinkingByModel[item.id],
+              )}
+              activeCapabilityId={
+                visibleTooltip?.anchor.modelId === item.id
+                  ? visibleTooltip.anchor.capability
+                  : null
+              }
+              onThinkingChange={onThinkingChange}
+              onShowCapability={showCapability}
+              onSelect={handleSelect}
+            />
+          )}
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <ThemedText variant="bodySm" themeColor="textSecondary">
+                No models match “{query.trim()}”.
+              </ThemedText>
+            </View>
+          }
+        />
+      )}
 
       <View ref={overlayRef} style={styles.overlay} pointerEvents="box-none">
         <CapabilityTooltip

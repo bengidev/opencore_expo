@@ -67,6 +67,10 @@ export default function RootLayout() {
               />
             )}
           </Stack.Screen>
+          <Stack.Screen
+            name="api-key"
+            options={{ presentation: 'modal', title: 'OpenRouter API key' }}
+          />
         </Stack>
       </KeyboardProvider>
     </ThemeProvider>

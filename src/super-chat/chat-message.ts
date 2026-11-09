@@ -1,4 +1,12 @@
+import type { ChatErrorCode } from './llm/types.ts';
+
 export type ChatRole = 'user' | 'assistant';
+
+export type ChatMessageError = {
+  code: ChatErrorCode;
+  message: string;
+  retryable: boolean;
+};
 
 export type ChatMessage = {
   id: string;
@@ -10,6 +18,10 @@ export type ChatMessage = {
   reasoningStreaming: boolean;
   /** Whole seconds the reasoning trace took, once it has finished. */
   reasoningDuration?: number;
+  /** Why the reply stopped early; set when the reply fails. */
+  error?: ChatMessageError;
+  /** Lives only in this conversation — never sent to the provider. */
+  localOnly?: true;
 };
 
 export type CreateChatMessageOptions = {
@@ -17,6 +29,8 @@ export type CreateChatMessageOptions = {
   reasoning?: string;
   reasoningStreaming?: boolean;
   reasoningDuration?: number;
+  error?: ChatMessageError;
+  localOnly?: true;
 };
 
 export function createChatMessage(
@@ -32,5 +46,7 @@ export function createChatMessage(
     reasoning: options.reasoning ?? '',
     reasoningStreaming: options.reasoningStreaming ?? false,
     reasoningDuration: options.reasoningDuration,
+    ...(options.error ? { error: options.error } : {}),
+    ...(options.localOnly ? { localOnly: options.localOnly } : {}),
   };
 }

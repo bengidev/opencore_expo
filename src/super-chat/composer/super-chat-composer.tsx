@@ -1,5 +1,5 @@
 import * as Haptics from 'expo-haptics';
-import { type ReactNode, useState } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { Alert, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
@@ -11,18 +11,43 @@ import { Typography } from '@/constants/typography';
 import { useFontFamily } from '@/hooks/use-font-family';
 import { useTheme } from '@/hooks/use-theme';
 import { hasNativeChrome } from '@/lib/ui-tier';
-import { DEFAULT_HOME_MODEL_ID, HOME_MODEL_SHEET_ITEMS } from '@/super-chat/composer/chat-models';
-import { QUICK_ACTIONS, type ComposerActionItem } from '@/super-chat/composer/composer-actions';
+import type { HomeModel, ThinkingLevel } from '@/super-chat/composer/chat-models';
+import {
+  QUICK_ACTIONS,
+  STOP_ACTION,
+  type ComposerActionItem,
+} from '@/super-chat/composer/composer-actions';
 import { ComposerActionsPopover } from '@/super-chat/composer/composer-actions-popover';
 import { ComposerModelSheet } from '@/super-chat/composer/composer-model-sheet';
 import { ComposerSendButton } from '@/super-chat/composer/composer-send-button';
 import { normalizeComposerDraft } from '@/super-chat/composer-state';
+import type { ModelCatalogStatus } from '@/super-chat/llm/use-model-catalog';
 
 export type SuperChatComposerProps = {
   draft: string;
   onDraftChange: (value: string) => void;
   onSubmit: (message: string) => void;
   onNewChat: () => void;
+  /** The live catalogue, already shaped for the sheet. */
+  models: readonly HomeModel[];
+  /** The selected model id, owned by the screen so both surfaces agree. */
+  modelId: string;
+  /** Thinking level per model id; the sheet reads and writes it. */
+  thinkingByModel: Record<string, ThinkingLevel>;
+  onModelSelect: (id: string) => void;
+  onThinkingChange: (modelId: string, level: ThinkingLevel) => void;
+  /** Catalogue state, so the sheet can show skeletons or a retry row. */
+  status: ModelCatalogStatus;
+  /** Why the catalogue fell back, when it did. */
+  error: string | null;
+  /** Refetches the catalogue after a failure. */
+  reload: () => void;
+  /** Retries on sheet open, skipping a try that just happened. */
+  retryOnOpen: () => void;
+  /** True while a reply is streaming; blocks a second send. */
+  isStreaming: boolean;
+  /** Stops the reply in flight. */
+  onStop: () => void;
   translucent?: boolean;
 };
 
@@ -31,16 +56,30 @@ export function SuperChatComposer({
   onDraftChange,
   onSubmit,
   onNewChat,
+  models,
+  modelId,
+  thinkingByModel,
+  onModelSelect,
+  onThinkingChange,
+  status,
+  error,
+  reload,
+  retryOnOpen,
+  isStreaming,
+  onStop,
   translucent = false,
 }: SuperChatComposerProps) {
   const theme = useTheme();
   const reducedMotion = useReducedMotion();
   const sans = useFontFamily('sans');
-  const [modelId, setModelId] = useState(DEFAULT_HOME_MODEL_ID);
   const trimmed = draft.trim();
+  const actions = useMemo(
+    () => (isStreaming ? [STOP_ACTION, ...QUICK_ACTIONS] : QUICK_ACTIONS),
+    [isStreaming],
+  );
 
   function handleModelSelect(id: string) {
-    setModelId(id);
+    onModelSelect(id);
     void Haptics.selectionAsync().catch(() => {});
   }
 
@@ -57,6 +96,9 @@ export function SuperChatComposer({
         return;
       case 'action:new-chat':
         onNewChat();
+        return;
+      case 'action:stop':
+        onStop();
         return;
       default:
         return;
@@ -90,12 +132,18 @@ export function SuperChatComposer({
       />
       <View style={styles.toolbar}>
         <ComposerModelSheet
-          models={HOME_MODEL_SHEET_ITEMS}
+          models={models}
           selectedId={modelId}
+          thinkingByModel={thinkingByModel}
+          status={status}
+          error={error}
+          reload={reload}
+          retryOnOpen={retryOnOpen}
+          onThinkingChange={onThinkingChange}
           onSelect={handleModelSelect}
         />
         <View style={styles.toolbarSpacer} />
-        <ComposerActionsPopover items={QUICK_ACTIONS} onSelect={handleActionSelect} />
+        <ComposerActionsPopover items={actions} onSelect={handleActionSelect} />
         <Pressable
           accessibilityRole="button"
           accessibilityLabel="Voice input"
@@ -104,9 +152,10 @@ export function SuperChatComposer({
           <AppIcon ios="mic" android="mic" size={22} color={theme.textDisplay} />
         </Pressable>
         <ComposerSendButton
-          enabled={Boolean(trimmed)}
+          enabled={isStreaming || Boolean(trimmed)}
+          mode={isStreaming ? 'stop' : 'send'}
           metalActive={!reducedMotion}
-          onPress={handleSend}
+          onPress={isStreaming ? onStop : handleSend}
         />
       </View>
     </ComposerShell>

@@ -8,6 +8,7 @@ import type { ComposerControlVariant } from '@/super-chat/composer/composer-acti
 import { ComposerModelTrigger } from '@/super-chat/composer/composer-model-trigger';
 import type { HomeModel, ThinkingLevel } from '@/super-chat/composer/chat-models';
 import { ModelSheetContent } from '@/super-chat/composer/model-sheet-content';
+import type { ModelCatalogStatus } from '@/super-chat/llm/use-model-catalog';
 import {
   MODEL_SHEET_DEFAULT_SNAP_INDEX,
   MODEL_SHEET_SNAP_POINTS,
@@ -16,7 +17,16 @@ import {
 type ComposerModelSheetProps = {
   models: readonly HomeModel[];
   selectedId: string;
+  /** Thinking level per model id, owned by the screen. */
+  thinkingByModel: Record<string, ThinkingLevel>;
+  status: ModelCatalogStatus;
+  error: string | null;
+  /** Explicit retry: always refetches. */
+  reload: () => void;
+  /** Retry on open: skipped inside the hook's guard window. */
+  retryOnOpen: () => void;
   variant?: ComposerControlVariant;
+  onThinkingChange: (modelId: string, level: ThinkingLevel) => void;
   onSelect: (id: string) => void;
 };
 
@@ -28,17 +38,18 @@ type ComposerModelSheetProps = {
 export function ComposerModelSheet({
   models,
   selectedId,
+  thinkingByModel,
+  status,
+  error,
+  reload,
+  retryOnOpen,
   variant,
+  onThinkingChange,
   onSelect,
 }: ComposerModelSheetProps) {
   const theme = useTheme();
   const sheetRef = useRef<BottomSheet>(null);
   const [query, setQuery] = useState('');
-  /**
-   * The thinking level each model was last set to. Models without a level
-   * never enter the map, and absent models fall back to their default.
-   */
-  const [thinkingByModel, setThinkingByModel] = useState<Record<string, ThinkingLevel>>({});
   /** Bumped on open and close so any overlay inside the sheet lets go. */
   const [resetKey, setResetKey] = useState(0);
   /**
@@ -50,14 +61,17 @@ export function ComposerModelSheet({
   /** The last height we asked the sheet for, to tell our own snaps from a drag. */
   const requestedSnapIndex = useRef(MODEL_SHEET_DEFAULT_SNAP_INDEX);
 
-  const selected = models.find((model) => model.id === selectedId) ?? models[0];
+  const selected = models.find((model) => model.id === selectedId) ?? models[0] ?? null;
 
   const open = useCallback(() => {
     setQuery('');
     setResetKey((key) => key + 1);
+    // A fallback row is a stand-in, not a catalogue: retry as the sheet opens,
+    // unless the hook's guard says a try just happened.
+    if (status === 'fallback') retryOnOpen();
     requestedSnapIndex.current = preferredSnapIndex.current;
     sheetRef.current?.snapToIndex(preferredSnapIndex.current);
-  }, []);
+  }, [retryOnOpen, status]);
 
   const handleSnapChange = useCallback((index: number) => {
     if (index < 0) return;
@@ -67,12 +81,13 @@ export function ComposerModelSheet({
     }
   }, []);
 
-  const handleThinkingChange = useCallback((modelId: string, level: ThinkingLevel) => {
-    setThinkingByModel((current) =>
-      current[modelId] === level ? current : { ...current, [modelId]: level },
-    );
-    void Haptics.selectionAsync().catch(() => {});
-  }, []);
+  const handleThinkingChange = useCallback(
+    (modelId: string, level: ThinkingLevel) => {
+      onThinkingChange(modelId, level);
+      void Haptics.selectionAsync().catch(() => {});
+    },
+    [onThinkingChange],
+  );
 
   const handleSelect = useCallback(
     (id: string) => {
@@ -81,6 +96,10 @@ export function ComposerModelSheet({
     },
     [onSelect],
   );
+
+  // An empty catalogue has nothing to trigger, and the chip must never render
+  // an undefined model.
+  if (selected === null) return null;
 
   return (
     <>
@@ -107,6 +126,9 @@ export function ComposerModelSheet({
           query={query}
           resetKey={resetKey}
           thinkingByModel={thinkingByModel}
+          status={status}
+          error={error}
+          onRetry={reload}
           onQueryChange={setQuery}
           onThinkingChange={handleThinkingChange}
           onSelect={handleSelect}
