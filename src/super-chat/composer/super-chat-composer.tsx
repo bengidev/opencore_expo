@@ -115,6 +115,7 @@ export function SuperChatComposer({
   return (
     <ComposerShell translucent={translucent} reducedMotion={reducedMotion}>
       <TextInput
+        testID="composer-input"
         value={draft}
         onChangeText={onDraftChange}
         placeholder="How can I help you today?"

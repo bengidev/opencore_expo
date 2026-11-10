@@ -9,7 +9,8 @@ import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import type { ChatMessage } from '@/super-chat/chat-message';
 import type { ChatErrorCode } from '@/super-chat/llm/types';
-import { ReasoningPanel } from '@/super-chat/reasoning-panel';
+// The mapping module shares this basename; the extension selects the component.
+import { ReasoningActivity } from '@/super-chat/reasoning-activity.tsx';
 import { MarkdownAnswer } from '@/super-chat/markdown-answer';
 
 const ENTER_MS = 200;
@@ -77,11 +78,7 @@ export const MessageBubble = memo(function MessageBubble({ message, onRetry }: M
       entering={entering}
       style={[styles.shell, isUser ? styles.user : styles.assistant]}>
       {showReasoning ? (
-        <ReasoningPanel
-          text={message.reasoning}
-          streaming={message.reasoningStreaming}
-          duration={message.reasoningDuration}
-        />
+        <ReasoningActivity message={message} />
       ) : null}
 
       {showAnswer && showBubble ? (

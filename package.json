@@ -62,7 +62,7 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "node --test src/onboarding/*.test.mjs src/onboarding/shark-ocean/*.test.mjs src/super-chat/*.test.mjs src/super-chat/llm/*.test.mjs src/super-chat/llm/providers/openrouter/*.test.mjs src/super-chat/composer/*.test.mjs"
+    "test": "node --test src/onboarding/*.test.mjs src/onboarding/shark-ocean/*.test.mjs src/super-chat/*.test.mjs src/super-chat/llm/*.test.mjs src/super-chat/llm/providers/openrouter/*.test.mjs src/super-chat/composer/*.test.mjs src/components/agent-activity/*.test.mjs"
   },
   "private": true
 }
