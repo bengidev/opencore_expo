@@ -58,6 +58,7 @@ export function ComposerSendButton({
   function renderFace(orbFill: string, tint: string) {
     return (
       <Pressable
+        testID={isStop ? 'composer-stop' : 'composer-send'}
         accessibilityRole="button"
         accessibilityLabel={isStop ? 'Stop' : 'Send message'}
         accessibilityState={{ disabled: !enabled }}
