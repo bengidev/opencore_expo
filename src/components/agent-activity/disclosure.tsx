@@ -72,6 +72,10 @@ export function Disclosure({ open, disabled = false, children, style }: Disclosu
     <Animated.View
       accessibilityElementsHidden={!open}
       importantForAccessibility={open ? 'auto' : 'no-hide-descendants'}
+      // Android does not clip touches to a zero-height parent, so a folded log
+      // would keep a live scroll surface under the header. Disable it the
+      // moment the fold starts, not when the animation ends.
+      pointerEvents={open ? 'auto' : 'none'}
       style={[styles.root, style, animatedStyle]}>
       <View style={styles.content} onLayout={handleLayout}>
         {children}

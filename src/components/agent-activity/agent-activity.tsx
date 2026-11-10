@@ -12,6 +12,7 @@ import {
   type ScrollViewInstance,
   type StyleProp,
   type TextStyle,
+  type ViewProps,
   type ViewStyle,
 } from 'react-native';
 import Animated, {
@@ -44,7 +45,7 @@ const SHIMMER_MS = 1200;
 const FADE_HEIGHT = 12;
 const CHEVRON_SIZE = 14;
 
-export type AgentActivityProps = {
+export type AgentActivityProps = Omit<ViewProps, 'children'> & {
   items: AgentActivityItem[];
   contentType?: AgentActivityContentType;
   status?: AgentActivityStatus;
@@ -60,7 +61,6 @@ export type AgentActivityProps = {
   summary?: ReactNode;
   maxHeight?: number;
   onOpenResult?: (result: AgentSearchResult) => void;
-  style?: StyleProp<ViewStyle>;
   contentStyle?: StyleProp<ViewStyle>;
   disableAnimation?: boolean;
 };
@@ -97,6 +97,7 @@ export function AgentActivity({
   style,
   contentStyle,
   disableAnimation = false,
+  ...rest
 }: AgentActivityProps) {
   const theme = useTheme();
   const reduced = useReducedMotion();
@@ -126,7 +127,6 @@ export function AgentActivity({
   const [resetKey, setResetKey] = useState(`${expanded}:${working}`);
 
   const scrollRef = useRef<ScrollViewInstance>(null);
-  const measured = useRef(false);
   const announced = useRef(working);
   const glide = useSharedValue(0);
   const turn = useSharedValue(expanded ? 1 : 0);
@@ -136,15 +136,12 @@ export function AgentActivity({
   // reader starts at the beginning of the trace.
   useLayoutEffect(() => {
     const target = working ? Math.min(0, viewport - contentHeight) : 0;
-    // A working log mounts already pinned to its newest row: its first painted
-    // frame is the final offset, not a spring up from the top.
-    const seeded = working && !measured.current;
-    if (contentHeight > 0) measured.current = true;
     // Streamed words arrive every few frames; a spring restarted on each delta
     // settles behind the text and clips the newest line until the model pauses.
     // Pinning directly keeps the last line whole — the per-token shift is a few
-    // pixels, so it still reads as a glide. The spring is for discrete moves.
-    glide.set(working || still || seeded ? target : withSpring(target, SPRING_LAYOUT));
+    // pixels, so it still reads as a glide. The spring is only the settle back
+    // to the top when the run completes.
+    glide.set(working || still ? target : withSpring(target, SPRING_LAYOUT));
   }, [contentHeight, glide, still, viewport, working]);
 
   useEffect(() => {
@@ -155,7 +152,7 @@ export function AgentActivity({
   // Reopening starts at the top, and a run that starts working again begins pinned
   // to its newest row; while working the glide owns the position, so the reset only
   // matters on the first readable frame.
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!expanded) return;
     scrollRef.current?.scrollTo({ y: 0, animated: false });
     scrollYRef.current = 0;
@@ -202,8 +199,12 @@ export function AgentActivity({
     // A completed log can grow or shrink without a scroll; recomputing from the
     // last offset keeps a band from outliving the overflow it was showing.
     const nextViewport = Math.min(height, maxHeight);
-    setShowTop(scrollYRef.current > 0.5);
-    setShowBottom(scrollYRef.current < height - nextViewport - 0.5);
+    // Native clamps the offset when content shrinks; mirror that here so a fade
+    // cannot outlive the overflow it was showing.
+    const nextOffset = Math.min(scrollYRef.current, Math.max(0, height - nextViewport));
+    scrollYRef.current = nextOffset;
+    setShowTop(nextOffset > 0.5);
+    setShowBottom(nextOffset < height - nextViewport - 0.5);
   }
 
   function handleScroll(event: NativeSyntheticEvent<NativeScrollEvent>) {
@@ -227,7 +228,7 @@ export function AgentActivity({
   }
 
   return (
-    <View style={style} accessibilityState={{ busy: working }}>
+    <View {...rest} style={style} accessibilityState={{ busy: working }}>
       <View style={styles.header}>
         {working ? (
           <Shimmer
