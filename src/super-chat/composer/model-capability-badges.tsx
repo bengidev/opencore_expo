@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { AppIcon } from '@/components/app-icon';
+import { Radius } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import {
   MODEL_CAPABILITIES,
@@ -60,6 +61,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderRadius: CAPABILITY_BADGE_SIZE / 2,
+    borderRadius: Radius.compact,
+    borderCurve: 'continuous',
   },
 });
