@@ -16,8 +16,6 @@ export type ModelCapability = {
   id: ModelCapabilityId;
   /** Short noun used as the tooltip title. */
   label: string;
-  /** Plain-language explanation shown when the badge is held down. */
-  description: string;
   /** SF Symbol for the badge. */
   iosSymbol: ComposerSymbolName;
   /** Material Icons glyph for the badge, used by the React Native fallback. */
@@ -29,56 +27,48 @@ export const MODEL_CAPABILITIES: Record<ModelCapabilityId, ModelCapability> = {
   text: {
     id: 'text',
     label: 'Text',
-    description: 'Reads and writes text in any language.',
     iosSymbol: 'text.alignleft',
     fallbackIcon: 'notes',
   },
   image: {
     id: 'image',
     label: 'Images',
-    description: 'Understands photos, screenshots and scanned pages.',
     iosSymbol: 'photo',
     fallbackIcon: 'image',
   },
   documents: {
     id: 'documents',
     label: 'Files',
-    description: 'Opens PDFs, spreadsheets and long documents.',
     iosSymbol: 'doc.text',
     fallbackIcon: 'description',
   },
   code: {
     id: 'code',
     label: 'Code',
-    description: 'Reads, writes and reviews source files.',
     iosSymbol: 'chevron.left.forwardslash.chevron.right',
     fallbackIcon: 'code',
   },
   web: {
     id: 'web',
     label: 'Web',
-    description: 'Looks things up and cites sources from the open web.',
     iosSymbol: 'globe',
     fallbackIcon: 'public',
   },
   reasoning: {
     id: 'reasoning',
     label: 'Reasoning',
-    description: 'Thinks step by step before it answers.',
     iosSymbol: 'brain.head.profile',
     fallbackIcon: 'psychology',
   },
   audio: {
     id: 'audio',
     label: 'Audio',
-    description: 'Listens to voice notes and audio clips.',
     iosSymbol: 'waveform',
     fallbackIcon: 'graphic-eq',
   },
   video: {
     id: 'video',
     label: 'Video',
-    description: 'Watches screen recordings and video clips.',
     iosSymbol: 'video',
     fallbackIcon: 'videocam',
   },

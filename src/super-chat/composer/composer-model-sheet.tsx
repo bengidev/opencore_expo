@@ -50,8 +50,6 @@ export function ComposerModelSheet({
   const theme = useTheme();
   const sheetRef = useRef<BottomSheet>(null);
   const [query, setQuery] = useState('');
-  /** Bumped on open and close so any overlay inside the sheet lets go. */
-  const [resetKey, setResetKey] = useState(0);
   /**
    * The height the user last rested the sheet at. The sheet grows past it
    * while the search field is focused, because the keyboard hides the
@@ -65,7 +63,6 @@ export function ComposerModelSheet({
 
   const open = useCallback(() => {
     setQuery('');
-    setResetKey((key) => key + 1);
     // A fallback row is a stand-in, not a catalogue: retry as the sheet opens,
     // unless the hook's guard says a try just happened.
     if (status === 'fallback') retryOnOpen();
@@ -117,14 +114,12 @@ export function ComposerModelSheet({
         onChange={handleSnapChange}
         onClose={() => {
           setQuery('');
-          setResetKey((key) => key + 1);
         }}
         testID="composer-model-sheet">
         <ModelSheetContent
           models={models}
           selectedId={selectedId}
           query={query}
-          resetKey={resetKey}
           thinkingByModel={thinkingByModel}
           status={status}
           error={error}

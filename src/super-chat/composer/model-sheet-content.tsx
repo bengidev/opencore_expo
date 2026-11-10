@@ -1,5 +1,4 @@
-import type { ComponentRef } from 'react';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useMemo } from 'react';
 import { FlatList, Pressable, StyleSheet, TextInput, View } from 'react-native';
 
 import { AppIcon } from '@/components/app-icon';
@@ -10,15 +9,9 @@ import {
   MODEL_CAPABILITIES,
   filterHomeModels,
   type HomeModel,
-  type ModelCapabilityId,
   type ThinkingLevel,
 } from '@/super-chat/composer/chat-models';
-import {
-  CapabilityTooltip,
-  ModelCapabilityBadges,
-  type CapabilityTooltipAnchor,
-  type CapabilityTooltipContainer,
-} from '@/super-chat/composer/model-capability-badges';
+import { ModelCapabilityBadges } from '@/super-chat/composer/model-capability-badges';
 import {
   ROW_NAME_LINE_HEIGHT,
   ROW_TRAILING_INSET,
@@ -35,8 +28,6 @@ type ModelSheetContentProps = {
   models: readonly HomeModel[];
   selectedId: string;
   query: string;
-  /** Bumped by the sheet when it opens or closes, to clear any open overlay. */
-  resetKey?: number;
   thinkingByModel: Record<string, ThinkingLevel>;
   /** Loading shows skeleton rows; fallback keeps the rows and offers a retry. */
   status: ModelCatalogStatus;
@@ -57,7 +48,6 @@ export function ModelSheetContent({
   models,
   selectedId,
   query,
-  resetKey = 0,
   thinkingByModel,
   status,
   error,
@@ -67,51 +57,9 @@ export function ModelSheetContent({
   onSelect,
 }: ModelSheetContentProps) {
   const theme = useTheme();
-  const overlayRef = useRef<ComponentRef<typeof View>>(null);
-  const [tooltip, setTooltip] = useState<{
-    anchor: CapabilityTooltipAnchor;
-    container: CapabilityTooltipContainer;
-    /** The sheet generation this tooltip belongs to. */
-    resetKey: number;
-  } | null>(null);
   const visibleModels = useMemo(
     () => filterHomeModels(models, query),
     [models, query],
-  );
-
-  // A tooltip from a previous sheet generation stays in state but never
-  // renders, so opening the sheet again cannot revive a stale overlay.
-  const visibleTooltip = tooltip?.resetKey === resetKey ? tooltip : null;
-
-  const showCapability = useCallback(
-    (next: CapabilityTooltipAnchor) => {
-      overlayRef.current?.measureInWindow((x, y, width, height) => {
-        setTooltip({
-          anchor: next,
-          container: { x, y, width, height },
-          resetKey,
-        });
-      });
-    },
-    [resetKey],
-  );
-
-  const dismissCapability = useCallback(() => setTooltip(null), []);
-
-  const handleQueryChange = useCallback(
-    (next: string) => {
-      setTooltip(null);
-      onQueryChange(next);
-    },
-    [onQueryChange],
-  );
-
-  const handleSelect = useCallback(
-    (id: string) => {
-      setTooltip(null);
-      onSelect(id);
-    },
-    [onSelect],
   );
 
   return (
@@ -124,7 +72,7 @@ export function ModelSheetContent({
         <AppIcon ios="magnifyingglass" android="search" size={18} color={theme.textSecondary} />
         <TextInput
           value={query}
-          onChangeText={handleQueryChange}
+          onChangeText={onQueryChange}
           placeholder="Search models"
           placeholderTextColor={theme.textDisabled}
           style={[styles.searchInput, { color: theme.text }]}
@@ -147,7 +95,6 @@ export function ModelSheetContent({
           contentContainerStyle={styles.listContent}
           nestedScrollEnabled
           keyboardShouldPersistTaps="handled"
-          onScrollBeginDrag={dismissCapability}
           ListHeaderComponent={
             <View style={styles.listHeader}>
               <ThemedText variant="subheading" themeColor="textDisplay">
@@ -166,14 +113,8 @@ export function ModelSheetContent({
                 item.thinkingLevels,
                 thinkingByModel[item.id],
               )}
-              activeCapabilityId={
-                visibleTooltip?.anchor.modelId === item.id
-                  ? visibleTooltip.anchor.capability
-                  : null
-              }
               onThinkingChange={onThinkingChange}
-              onShowCapability={showCapability}
-              onSelect={handleSelect}
+              onSelect={onSelect}
             />
           )}
           ListEmptyComponent={
@@ -185,14 +126,6 @@ export function ModelSheetContent({
           }
         />
       )}
-
-      <View ref={overlayRef} style={styles.overlay} pointerEvents="box-none">
-        <CapabilityTooltip
-          anchor={visibleTooltip?.anchor ?? null}
-          container={visibleTooltip?.container ?? null}
-          onDismiss={dismissCapability}
-        />
-      </View>
     </View>
   );
 }
@@ -201,9 +134,7 @@ type ModelRowProps = {
   model: HomeModel;
   isSelected: boolean;
   thinkingLevel: ThinkingLevel | null;
-  activeCapabilityId: ModelCapabilityId | null;
   onThinkingChange: (modelId: string, level: ThinkingLevel) => void;
-  onShowCapability: (anchor: CapabilityTooltipAnchor) => void;
   onSelect: (id: string) => void;
 };
 
@@ -211,9 +142,7 @@ function ModelRow({
   model,
   isSelected,
   thinkingLevel,
-  activeCapabilityId,
   onThinkingChange,
-  onShowCapability,
   onSelect,
 }: ModelRowProps) {
   const theme = useTheme();
@@ -264,11 +193,7 @@ function ModelRow({
               style={styles.name}>
               {model.name}
             </ThemedText>
-            <ModelCapabilityBadges
-              model={model}
-              activeCapabilityId={activeCapabilityId}
-              onShowTooltip={onShowCapability}
-            />
+            <ModelCapabilityBadges model={model} />
           </View>
           <ThemedText variant="caption" themeColor="textSecondary" numberOfLines={1}>
             {model.description}
@@ -350,13 +275,6 @@ const styles = StyleSheet.create({
     right: ROW_TRAILING_INSET,
     // Centers the control on the name line instead of on the row.
     top: ROW_TRAILING_INSET - (THINKING_TRIGGER_HEIGHT - ROW_NAME_LINE_HEIGHT) / 2,
-  },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
   },
   empty: {
     paddingVertical: Spacing.four,
