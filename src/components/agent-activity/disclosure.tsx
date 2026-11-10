@@ -58,9 +58,12 @@ export function Disclosure({ open, disabled = false, children, style }: Disclosu
   function handleLayout(event: LayoutChangeEvent) {
     const measured = event.nativeEvent.layout.height;
     contentHeight.set(measured);
-    // Layout changes while open (new rows streaming in) need their own pass;
-    // the effect above only re-runs when `open` or the motion preference flips.
-    height.set(nextHeight(open, measured, still));
+    if (!open) return;
+    // While the log is open, a layout change is new content arriving. Follow
+    // it exactly: a timed height restarts on every delta and settles ~220 ms
+    // behind the stream, so the newest line stays clipped for as long as the
+    // model keeps talking. Only the unfold from zero is animated.
+    height.set(height.get() === 0 ? nextHeight(true, measured, still) : measured);
   }
 
   // The children stay mounted while folded, so hide the collapsed subtree

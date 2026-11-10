@@ -140,7 +140,11 @@ export function AgentActivity({
     // frame is the final offset, not a spring up from the top.
     const seeded = working && !measured.current;
     if (contentHeight > 0) measured.current = true;
-    glide.set(still || seeded ? target : withSpring(target, SPRING_LAYOUT));
+    // Streamed words arrive every few frames; a spring restarted on each delta
+    // settles behind the text and clips the newest line until the model pauses.
+    // Pinning directly keeps the last line whole — the per-token shift is a few
+    // pixels, so it still reads as a glide. The spring is for discrete moves.
+    glide.set(working || still || seeded ? target : withSpring(target, SPRING_LAYOUT));
   }, [contentHeight, glide, still, viewport, working]);
 
   useEffect(() => {
@@ -238,6 +242,7 @@ export function AgentActivity({
           </Shimmer>
         ) : (
           <Pressable
+            testID="agent-activity-summary"
             accessibilityRole="button"
             accessibilityState={{ expanded }}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}

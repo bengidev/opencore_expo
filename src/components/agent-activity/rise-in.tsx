@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { StyleProp, ViewStyle } from 'react-native';
+import { Platform, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, {
   FadeInDown,
   FadeOutUp,
@@ -35,7 +35,11 @@ type RiseInProps = {
  */
 export function RiseIn({ children, disabled = false, style }: RiseInProps) {
   const reduced = useReducedMotion();
-  const motion = reduced || disabled;
+  // Reanimated's web entering values pin the row with `position: absolute`
+  // while it animates, which takes every row out of flow: the log measures 0
+  // pt tall and the rows stack on top of each other. Native keeps the motion;
+  // web renders the same rows plainly so layout and measurement stay real.
+  const motion = reduced || disabled || Platform.OS === 'web';
 
   if (motion) {
     return <Animated.View style={style}>{children}</Animated.View>;
