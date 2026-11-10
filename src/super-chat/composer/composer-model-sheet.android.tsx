@@ -71,7 +71,7 @@ const MODEL_ICONS: Record<HomeModelAndroidIcon, ImageSourcePropType> = {
 
 const SEARCH_ICON: ImageSourcePropType = require('@expo/material-symbols/search.xml');
 
-/** One Material Symbol per capability, shown inline on the model's name line. */
+/** One Material Symbol per capability, shown under the model's name. */
 const CAPABILITY_ICONS: Record<ModelCapabilityId, ImageSourcePropType> = {
   text: require('@expo/material-symbols/notes.xml'),
   image: require('@expo/material-symbols/image.xml'),
@@ -231,14 +231,16 @@ export function ComposerModelSheet({
                         <Icon source={MODEL_ICONS[model.androidIcon]} size={22} />
                       </ListItem.LeadingContent>
                       <ListItem.HeadlineContent>
+                        <Text
+                          color={isSelected ? theme.textDisplay : theme.text}
+                          style={{ fontSize: 16, fontWeight: isSelected ? '600' : '500' }}>
+                          {model.name}
+                        </Text>
+                      </ListItem.HeadlineContent>
+                      <ListItem.SupportingContent>
                         <Row
                           verticalAlignment="center"
                           horizontalArrangement={{ spacedBy: 6 }}>
-                          <Text
-                            color={isSelected ? theme.textDisplay : theme.text}
-                            style={{ fontSize: 16, fontWeight: isSelected ? '600' : '500' }}>
-                            {model.name}
-                          </Text>
                           {model.capabilities.map((capability) => (
                             <Icon
                               key={capability}
@@ -248,11 +250,6 @@ export function ComposerModelSheet({
                             />
                           ))}
                         </Row>
-                      </ListItem.HeadlineContent>
-                      <ListItem.SupportingContent>
-                        <Text color={theme.textSecondary} style={{ fontSize: 13 }}>
-                          {model.description}
-                        </Text>
                       </ListItem.SupportingContent>
                       {level ? (
                         <ListItem.TrailingContent>

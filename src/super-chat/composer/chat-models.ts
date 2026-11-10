@@ -14,10 +14,8 @@ export type ModelCapabilityId =
 
 export type ModelCapability = {
   id: ModelCapabilityId;
-  /** Short noun used as the tooltip title. */
+  /** Short noun used in the row's spoken capability summary. */
   label: string;
-  /** Plain-language explanation shown when the badge is held down. */
-  description: string;
   /** SF Symbol for the badge. */
   iosSymbol: ComposerSymbolName;
   /** Material Icons glyph for the badge, used by the React Native fallback. */
@@ -29,56 +27,48 @@ export const MODEL_CAPABILITIES: Record<ModelCapabilityId, ModelCapability> = {
   text: {
     id: 'text',
     label: 'Text',
-    description: 'Reads and writes text in any language.',
     iosSymbol: 'text.alignleft',
     fallbackIcon: 'notes',
   },
   image: {
     id: 'image',
     label: 'Images',
-    description: 'Understands photos, screenshots and scanned pages.',
     iosSymbol: 'photo',
     fallbackIcon: 'image',
   },
   documents: {
     id: 'documents',
     label: 'Files',
-    description: 'Opens PDFs, spreadsheets and long documents.',
     iosSymbol: 'doc.text',
     fallbackIcon: 'description',
   },
   code: {
     id: 'code',
     label: 'Code',
-    description: 'Reads, writes and reviews source files.',
     iosSymbol: 'chevron.left.forwardslash.chevron.right',
     fallbackIcon: 'code',
   },
   web: {
     id: 'web',
     label: 'Web',
-    description: 'Looks things up and cites sources from the open web.',
     iosSymbol: 'globe',
     fallbackIcon: 'public',
   },
   reasoning: {
     id: 'reasoning',
     label: 'Reasoning',
-    description: 'Thinks step by step before it answers.',
     iosSymbol: 'brain.head.profile',
     fallbackIcon: 'psychology',
   },
   audio: {
     id: 'audio',
     label: 'Audio',
-    description: 'Listens to voice notes and audio clips.',
     iosSymbol: 'waveform',
     fallbackIcon: 'graphic-eq',
   },
   video: {
     id: 'video',
     label: 'Video',
-    description: 'Watches screen recordings and video clips.',
     iosSymbol: 'video',
     fallbackIcon: 'videocam',
   },
@@ -100,7 +90,7 @@ export const THINKING_LEVEL_LABELS: Record<ThinkingLevel, string> = {
 export type HomeModel = {
   id: string;
   name: string;
-  /** One-line summary shown under the name inside the model sheet. */
+  /** One-line summary announced with the row by assistive technology. */
   description: string;
   /** SF Symbol shown next to the model name. */
   iosSymbol: ComposerSymbolName;
@@ -108,7 +98,7 @@ export type HomeModel = {
   androidIcon: HomeModelAndroidIcon;
   /** Material Icons glyph name, used by the React Native fallback. */
   fallbackIcon: ComposerFallbackIcon;
-  /** Media and skills the model handles, shown as badges on the name line. */
+  /** Media and skills the model handles, shown as badges under the name. */
   capabilities: readonly ModelCapabilityId[];
   /**
    * Thinking levels this model can be dialled through. Empty means the model
