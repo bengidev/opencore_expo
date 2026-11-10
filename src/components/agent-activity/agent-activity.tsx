@@ -97,6 +97,7 @@ export function AgentActivity({
   style,
   contentStyle,
   disableAnimation = false,
+  accessibilityState,
   ...rest
 }: AgentActivityProps) {
   const theme = useTheme();
@@ -228,7 +229,10 @@ export function AgentActivity({
   }
 
   return (
-    <View {...rest} style={style} accessibilityState={{ busy: working }}>
+    <View
+      {...rest}
+      style={style}
+      accessibilityState={{ ...accessibilityState, busy: working }}>
       <View style={styles.header}>
         {working ? (
           <Shimmer
