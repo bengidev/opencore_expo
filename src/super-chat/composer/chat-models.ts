@@ -14,7 +14,7 @@ export type ModelCapabilityId =
 
 export type ModelCapability = {
   id: ModelCapabilityId;
-  /** Short noun used as the tooltip title. */
+  /** Short noun used in the row's spoken capability summary. */
   label: string;
   /** SF Symbol for the badge. */
   iosSymbol: ComposerSymbolName;
@@ -90,7 +90,7 @@ export const THINKING_LEVEL_LABELS: Record<ThinkingLevel, string> = {
 export type HomeModel = {
   id: string;
   name: string;
-  /** One-line summary shown under the name inside the model sheet. */
+  /** One-line summary announced with the row by assistive technology. */
   description: string;
   /** SF Symbol shown next to the model name. */
   iosSymbol: ComposerSymbolName;
@@ -98,7 +98,7 @@ export type HomeModel = {
   androidIcon: HomeModelAndroidIcon;
   /** Material Icons glyph name, used by the React Native fallback. */
   fallbackIcon: ComposerFallbackIcon;
-  /** Media and skills the model handles, shown as badges on the name line. */
+  /** Media and skills the model handles, shown as badges under the name. */
   capabilities: readonly ModelCapabilityId[];
   /**
    * Thinking levels this model can be dialled through. Empty means the model

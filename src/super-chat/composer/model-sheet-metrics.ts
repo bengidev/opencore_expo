@@ -1,7 +1,7 @@
 /**
  * Layout constants shared by the model row and the controls that live on its
- * trailing edge. Keeping the numbers here lets the row reserve exactly the
- * space its badges and thinking trigger occupy.
+ * trailing edge. Keeping the numbers here lets the name line reserve exactly
+ * the space its trailing trigger occupies.
  */
 
 export const CAPABILITY_BADGE_SIZE = 24;

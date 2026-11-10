@@ -193,11 +193,8 @@ function ModelRow({
               style={styles.name}>
               {model.name}
             </ThemedText>
-            <ModelCapabilityBadges model={model} />
           </View>
-          <ThemedText variant="caption" themeColor="textSecondary" numberOfLines={1}>
-            {model.description}
-          </ThemedText>
+          <ModelCapabilityBadges model={model} />
         </View>
       </Pressable>
 
