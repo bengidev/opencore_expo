@@ -2,8 +2,10 @@ import { router } from 'expo-router';
 import { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { Keyframe, ReduceMotion, useReducedMotion } from 'react-native-reanimated';
-import { Shimmer } from 'panelui-native/components/shimmer';
+import { ThinkingOrb } from 'panelui-native/components/thinking-orb';
 
+import { resolveThinkingOrbStyle } from '@/components/agent-activity/orb-style';
+import { useThinkingOrbPreference } from '@/components/agent-activity/orb-style-store';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -61,6 +63,10 @@ type MessageBubbleProps = {
 export const MessageBubble = memo(function MessageBubble({ message, onRetry }: MessageBubbleProps) {
   const theme = useTheme();
   const reducedMotion = useReducedMotion();
+  // Bubbles fill the message column; the list's own padding is the gutter.
+  // Waiting for the first token is a text answer forming, so `auto` draws the
+  // composing orb; a pinned style applies here like everywhere else.
+  const pendingOrbStyle = resolveThinkingOrbStyle(useThinkingOrbPreference(), 'text');
   const isUser = message.role === 'user';
   const entering = isUser ? userBubbleEntering : assistantBubbleEntering;
   const showReasoning = message.role === 'assistant' && message.reasoning.length > 0;
@@ -113,14 +119,14 @@ export const MessageBubble = memo(function MessageBubble({ message, onRetry }: M
             styles.pending,
             { backgroundColor: theme.surface, borderColor: theme.border },
           ]}>
-          <Shimmer
-            as="text"
-            duration={1200}
-            baseColor={theme.textSecondary}
-            shimmerColor={theme.text}
-            textStyle={styles.pendingDots}>
-            ···
-          </Shimmer>
+          <View style={styles.pendingOrb}>
+            <ThinkingOrb
+              state={pendingOrbStyle}
+              size={20}
+              color={theme.text}
+              accessibilityLabel="Thinking"
+            />
+          </View>
         </View>
       ) : null}
 
@@ -165,7 +171,6 @@ export const MessageBubble = memo(function MessageBubble({ message, onRetry }: M
 
 const styles = StyleSheet.create({
   shell: {
-    maxWidth: '84%',
     gap: Spacing.two,
   },
   bubble: {
@@ -179,10 +184,9 @@ const styles = StyleSheet.create({
   pending: {
     borderWidth: 1,
   },
-  pendingDots: {
-    fontSize: 16,
-    lineHeight: 24,
-    letterSpacing: 2,
+  pendingOrb: {
+    height: 24,
+    justifyContent: 'center',
   },
   error: {
     gap: Spacing.one,
@@ -200,10 +204,9 @@ const styles = StyleSheet.create({
   },
   user: {
     alignSelf: 'flex-end',
-    maxWidth: '82%',
   },
   assistant: {
     alignSelf: 'flex-start',
-    width: '84%',
+    width: '100%',
   },
 });

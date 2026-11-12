@@ -6,6 +6,8 @@ import { useCallback, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
 
+import { thinkingOrbPreferenceLabel } from '@/components/agent-activity/orb-style';
+import { useThinkingOrbPreference } from '@/components/agent-activity/orb-style-store';
 import { AppIcon } from '@/components/app-icon';
 import { NativeSurface } from '@/components/native-surface';
 import { TabScreen } from '@/components/tab-screen';
@@ -19,6 +21,7 @@ const SOURCE_URL = 'https://github.com/bengidev/opencore_expo';
 export function SettingsScreen() {
   const reducedMotion = useReducedMotion();
   const keyStatus = useKeyStatus();
+  const orbPreference = useThinkingOrbPreference();
   const version = Constants.expoConfig?.version ?? '1.0.0';
   const sdkVersion = Constants.expoConfig?.sdkVersion ?? '58';
 
@@ -35,6 +38,10 @@ export function SettingsScreen() {
     router.push('/api-key');
   };
 
+  const openOrbPicker = () => {
+    void Haptics.selectionAsync().catch(() => {});
+    router.push('/thinking-orb');
+  };
   const openSource = () => {
     void Haptics.selectionAsync().catch(() => {});
     void WebBrowser.openBrowserAsync(SOURCE_URL).catch(() => {});
@@ -64,6 +71,13 @@ export function SettingsScreen() {
 
         <SettingsSection label="Appearance">
           <SettingsRow label="Theme" value="System" divider />
+          <SettingsRow
+            label="Thinking orb"
+            value={thinkingOrbPreferenceLabel(orbPreference)}
+            onPress={openOrbPicker}
+            accessibilityHint="opens the orb picker"
+            divider
+          />
           <SettingsRow label="Motion" value={reducedMotion ? 'Reduced' : 'Full'} divider={false} />
         </SettingsSection>
 

@@ -71,6 +71,10 @@ export default function RootLayout() {
             name="api-key"
             options={{ presentation: 'modal', title: 'OpenRouter API key' }}
           />
+          <Stack.Screen
+            name="thinking-orb"
+            options={{ presentation: 'modal', title: 'Thinking orb' }}
+          />
         </Stack>
       </KeyboardProvider>
     </ThemeProvider>

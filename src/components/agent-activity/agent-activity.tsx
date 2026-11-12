@@ -22,6 +22,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { Shimmer } from 'panelui-native/components/shimmer';
+import { ThinkingOrb } from 'panelui-native/components/thinking-orb';
 
 import { AgentActivityRow } from '@/components/agent-activity/activity-row';
 import { ChevronDownGlyph } from '@/components/agent-activity/agent-icons';
@@ -29,6 +30,8 @@ import { activeLabelFor, contentTypeOf, summaryFor } from '@/components/agent-ac
 import { Disclosure } from '@/components/agent-activity/disclosure';
 import { FadeEdge } from '@/components/agent-activity/fade-edge';
 import { SPRING_LAYOUT, SPRING_SWAP } from '@/components/agent-activity/motion';
+import { resolveThinkingOrbStyle } from '@/components/agent-activity/orb-style';
+import { useThinkingOrbPreference } from '@/components/agent-activity/orb-style-store';
 import { RiseIn } from '@/components/agent-activity/rise-in';
 import type {
   AgentActivityContentType,
@@ -44,6 +47,8 @@ const DEFAULT_MAX_HEIGHT = 208;
 const SHIMMER_MS = 1200;
 const FADE_HEIGHT = 12;
 const CHEVRON_SIZE = 14;
+/** Matches the label's cap height closely enough to sit on its optical line. */
+const ORB_SIZE = 20;
 
 export type AgentActivityProps = Omit<ViewProps, 'children'> & {
   items: AgentActivityItem[];
@@ -103,9 +108,11 @@ export function AgentActivity({
   const theme = useTheme();
   const reduced = useReducedMotion();
   const still = reduced || disableAnimation;
+  const orbPreference = useThinkingOrbPreference();
 
   const type = contentTypeOf(items, contentType);
   const working = status === 'working';
+  const orbStyle = resolveThinkingOrbStyle(orbPreference, type);
   const label = activeLabel ?? activeLabelFor(type);
   const summaryLabel = summary ?? summaryFor(items, type, duration);
 
@@ -235,16 +242,29 @@ export function AgentActivity({
       accessibilityState={{ ...accessibilityState, busy: working }}>
       <View style={styles.header}>
         {working ? (
-          <Shimmer
-            as="text"
-            duration={SHIMMER_MS}
-            enabled={!disableAnimation}
-            baseColor={theme.textSecondary}
-            shimmerColor={theme.text}
-            textStyle={[styles.status, styles.statusFill, { color: theme.textSecondary }]}
-            accessibilityLiveRegion="polite">
-            {label}
-          </Shimmer>
+          <View style={styles.workingRow}>
+            {/* The label already says what is happening; a second live image
+                would only make a screen reader repeat it. */}
+            <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+              <ThinkingOrb
+                state={orbStyle}
+                size={ORB_SIZE}
+                color={theme.text}
+                paused={disableAnimation}
+              />
+            </View>
+            <Shimmer
+              as="text"
+              duration={SHIMMER_MS}
+              enabled={!disableAnimation}
+              baseColor={theme.textSecondary}
+              shimmerColor={theme.text}
+              style={styles.workingLabel}
+              textStyle={[styles.status, styles.statusFill, { color: theme.textSecondary }]}
+              accessibilityLiveRegion="polite">
+              {label}
+            </Shimmer>
+          </View>
         ) : (
           <Pressable
             testID="agent-activity-summary"
@@ -315,6 +335,16 @@ const styles = StyleSheet.create({
     letterSpacing: 0.88,
   },
   statusFill: {
+    flexShrink: 1,
+  },
+  workingRow: {
+    flex: 1,
+    height: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+  },
+  workingLabel: {
     flexShrink: 1,
   },
   summaryRow: {
