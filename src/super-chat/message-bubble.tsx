@@ -63,6 +63,7 @@ type MessageBubbleProps = {
 export const MessageBubble = memo(function MessageBubble({ message, onRetry }: MessageBubbleProps) {
   const theme = useTheme();
   const reducedMotion = useReducedMotion();
+  // Bubbles fill the message column; the list's own padding is the gutter.
   // Waiting for the first token is a text answer forming, so `auto` draws the
   // composing orb; a pinned style applies here like everywhere else.
   const pendingOrbStyle = resolveThinkingOrbStyle(useThinkingOrbPreference(), 'text');
@@ -170,7 +171,6 @@ export const MessageBubble = memo(function MessageBubble({ message, onRetry }: M
 
 const styles = StyleSheet.create({
   shell: {
-    maxWidth: '84%',
     gap: Spacing.two,
   },
   bubble: {
@@ -204,10 +204,9 @@ const styles = StyleSheet.create({
   },
   user: {
     alignSelf: 'flex-end',
-    maxWidth: '82%',
   },
   assistant: {
     alignSelf: 'flex-start',
-    width: '84%',
+    width: '100%',
   },
 });
