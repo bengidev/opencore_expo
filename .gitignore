@@ -55,3 +55,6 @@ example
 # Local agent notes. Do not commit process docs.
 /docs/superpowers/
 /docs/impeccable/
+# @generated expo skills start
+.agents/skills/expo-sqlite
+# @generated expo skills end
