@@ -9,15 +9,22 @@ import type { ChatMessage } from '@/chats/chat-message';
 export function MessageList({
   messages,
   onRetry,
+  hydrateKey,
 }: {
   messages: ChatMessage[];
   onRetry?: (id: string) => void;
+  hydrateKey?: string | null;
 }) {
   const listRef = useRef<Animated.FlatList<ChatMessage>>(null);
   const followLatestRef = useRef(true);
   const lastUserMessageIdRef = useRef<string | null>(null);
   const listHeightRef = useRef(0);
   const scrollFrameRef = useRef<number | null>(null);
+  const messagesRef = useRef(messages);
+
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   // Retrying an earlier answer would have to discard the turns that followed
   // it, so only the newest reply may restart.
@@ -33,6 +40,20 @@ export function MessageList({
       if (scrollFrameRef.current !== null) cancelAnimationFrame(scrollFrameRef.current);
     };
   }, []);
+
+  // A loaded thread is already at its end. Replaying the follow effect would
+  // animate through the whole history on open; seed the sent-message guard and
+  // jump once, unanimated.
+  useEffect(() => {
+    if (hydrateKey === undefined) return;
+    const lastUserMessage = [...messagesRef.current]
+      .reverse()
+      .find((message) => message.role === 'user');
+    lastUserMessageIdRef.current = lastUserMessage?.id ?? null;
+    followLatestRef.current = true;
+    const frame = requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: false }));
+    return () => cancelAnimationFrame(frame);
+  }, [hydrateKey]);
 
   useEffect(() => {
     const lastUserMessage = [...messages].reverse().find((message) => message.role === 'user');
