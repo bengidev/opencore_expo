@@ -21,12 +21,12 @@ import { useTheme } from '@/hooks/use-theme';
 import {
   THINKING_LEVEL_LABELS,
   type ThinkingLevel,
-} from '@/super-chat/composer/chat-models';
+} from '@/chats/composer/chat-models';
 import {
   THINKING_TRIGGER_HEIGHT,
   THINKING_TRIGGER_WIDTH,
-} from '@/super-chat/composer/model-sheet-metrics';
-import { ThinkingLevelPill } from '@/super-chat/composer/model-thinking-pill';
+} from '@/chats/composer/model-sheet-metrics';
+import { ThinkingLevelPill } from '@/chats/composer/model-thinking-pill';
 
 type ThinkingLevelControlProps = {
   modelId: string;

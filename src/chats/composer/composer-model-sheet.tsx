@@ -4,15 +4,15 @@ import { useCallback, useRef, useState } from 'react';
 
 import { useTheme } from '@/hooks/use-theme';
 import { hasNativeChrome } from '@/lib/ui-tier';
-import type { ComposerControlVariant } from '@/super-chat/composer/composer-actions-trigger';
-import { ComposerModelTrigger } from '@/super-chat/composer/composer-model-trigger';
-import type { HomeModel, ThinkingLevel } from '@/super-chat/composer/chat-models';
-import { ModelSheetContent } from '@/super-chat/composer/model-sheet-content';
-import type { ModelCatalogStatus } from '@/super-chat/llm/use-model-catalog';
+import type { ComposerControlVariant } from '@/chats/composer/composer-actions-trigger';
+import { ComposerModelTrigger } from '@/chats/composer/composer-model-trigger';
+import type { HomeModel, ThinkingLevel } from '@/chats/composer/chat-models';
+import { ModelSheetContent } from '@/chats/composer/model-sheet-content';
+import type { ModelCatalogStatus } from '@/chats/llm/use-model-catalog';
 import {
   MODEL_SHEET_DEFAULT_SNAP_INDEX,
   MODEL_SHEET_SNAP_POINTS,
-} from '@/super-chat/composer/model-sheet-snap';
+} from '@/chats/composer/model-sheet-snap';
 
 type ComposerModelSheetProps = {
   models: readonly HomeModel[];

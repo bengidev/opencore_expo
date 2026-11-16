@@ -21,10 +21,10 @@ import {
   clearOverrideKey,
   saveOverrideKey,
   useKeyStatus,
-} from '@/super-chat/llm/credentials-runtime';
-import { isValidKeyFormat, normalizeKey } from '@/super-chat/llm/credentials';
-import { openRouterProvider } from '@/super-chat/llm/providers/openrouter';
-import type { KeyStatus } from '@/super-chat/llm/types';
+} from '@/chats/llm/credentials-runtime';
+import { isValidKeyFormat, normalizeKey } from '@/chats/llm/credentials';
+import { openRouterProvider } from '@/chats/llm/providers/openrouter';
+import type { KeyStatus } from '@/chats/llm/types';
 
 const PRESS_EASE = cubicBezier(0.23, 1, 0.32, 1);
 const PRESS_MS = 150;

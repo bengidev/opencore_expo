@@ -4,8 +4,8 @@ import { FilledTonalButton, Host, Icon, Row, Text, TextButton } from '@expo/ui/j
 
 import { useMaterialTheme } from '@/hooks/use-material-theme';
 import { useTheme } from '@/hooks/use-theme';
-import type { ComposerControlVariant } from '@/super-chat/composer/composer-actions-trigger';
-import type { HomeModel, HomeModelAndroidIcon } from '@/super-chat/composer/chat-models';
+import type { ComposerControlVariant } from '@/chats/composer/composer-actions-trigger';
+import type { HomeModel, HomeModelAndroidIcon } from '@/chats/composer/chat-models';
 
 const MODEL_ICONS: Record<HomeModelAndroidIcon, ImageSourcePropType> = {
   image: require('@expo/material-symbols/image.xml'),

@@ -1,5 +1,5 @@
-import type { ComposerFallbackIcon, ComposerSymbolName } from '@/super-chat/composer/symbols';
-import type { ProviderModel } from '@/super-chat/llm/types';
+import type { ComposerFallbackIcon, ComposerSymbolName } from '@/chats/composer/symbols';
+import type { ProviderModel } from '@/chats/llm/types';
 
 /** What a model can take in and work with. Rendered as badges in the sheet. */
 export type ModelCapabilityId =

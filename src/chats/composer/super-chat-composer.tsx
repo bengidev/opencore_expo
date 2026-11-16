@@ -11,17 +11,17 @@ import { Typography } from '@/constants/typography';
 import { useFontFamily } from '@/hooks/use-font-family';
 import { useTheme } from '@/hooks/use-theme';
 import { hasNativeChrome } from '@/lib/ui-tier';
-import type { HomeModel, ThinkingLevel } from '@/super-chat/composer/chat-models';
+import type { HomeModel, ThinkingLevel } from '@/chats/composer/chat-models';
 import {
   QUICK_ACTIONS,
   STOP_ACTION,
   type ComposerActionItem,
-} from '@/super-chat/composer/composer-actions';
-import { ComposerActionsPopover } from '@/super-chat/composer/composer-actions-popover';
-import { ComposerModelSheet } from '@/super-chat/composer/composer-model-sheet';
-import { ComposerSendButton } from '@/super-chat/composer/composer-send-button';
-import { normalizeComposerDraft } from '@/super-chat/composer-state';
-import type { ModelCatalogStatus } from '@/super-chat/llm/use-model-catalog';
+} from '@/chats/composer/composer-actions';
+import { ComposerActionsPopover } from '@/chats/composer/composer-actions-popover';
+import { ComposerModelSheet } from '@/chats/composer/composer-model-sheet';
+import { ComposerSendButton } from '@/chats/composer/composer-send-button';
+import { normalizeComposerDraft } from '@/chats/composer-state';
+import type { ModelCatalogStatus } from '@/chats/llm/use-model-catalog';
 
 export type SuperChatComposerProps = {
   draft: string;

@@ -4,9 +4,9 @@ import { useReducedMotion } from 'react-native-reanimated';
 import { AgentActivity } from '@/components/agent-activity';
 import { Fonts } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import type { ChatMessage } from '@/super-chat/chat-message';
+import type { ChatMessage } from '@/chats/chat-message';
 import { reasoningActivity } from './reasoning-activity.ts';
-import { StreamingText } from '@/super-chat/streaming-text';
+import { StreamingText } from '@/chats/streaming-text';
 
 /**
  * The model's working, above the answer. The trace is a single text row so the

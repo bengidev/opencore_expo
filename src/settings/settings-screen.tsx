@@ -14,7 +14,7 @@ import { TabScreen } from '@/components/tab-screen';
 import { ThemedText } from '@/components/themed-text';
 import { Radius, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { refreshKeyStatus, useKeyStatus } from '@/super-chat/llm/credentials-runtime';
+import { refreshKeyStatus, useKeyStatus } from '@/chats/llm/credentials-runtime';
 
 const SOURCE_URL = 'https://github.com/bengidev/opencore_expo';
 

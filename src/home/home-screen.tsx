@@ -15,10 +15,10 @@ import { SuggestionCarousel } from '@/home/suggestion-carousel';
 import { useHomeEntrance } from '@/home/use-home-entrance';
 import { useKeyboardBottomPadding } from '@/hooks/use-keyboard-bottom-padding';
 import { SharkGlass, SharkOceanStage } from '@/onboarding/shark-ocean/shark-ocean-stage';
-import { toHomeModel } from '@/super-chat/composer/chat-models';
-import { SuperChatComposer } from '@/super-chat/composer/super-chat-composer';
-import { selectThinkingLevel } from '@/super-chat/llm/model-selection-store';
-import { useModelCatalog } from '@/super-chat/llm/use-model-catalog';
+import { toHomeModel } from '@/chats/composer/chat-models';
+import { SuperChatComposer } from '@/chats/composer/super-chat-composer';
+import { selectThinkingLevel } from '@/chats/llm/model-selection-store';
+import { useModelCatalog } from '@/chats/llm/use-model-catalog';
 
 const isStaticWebRender = Platform.OS === 'web' && typeof window === 'undefined';
 
@@ -92,7 +92,7 @@ export function HomeScreen() {
     const trimmed = message.trim();
     if (!trimmed) return;
     setDraft('');
-    router.push({ pathname: '/super-chat', params: { seed: trimmed } });
+    router.push({ pathname: '/chats/new', params: { seed: trimmed } });
   }
 
   const content = (
@@ -126,7 +126,7 @@ export function HomeScreen() {
                   draft={draft}
                   onDraftChange={setDraft}
                   onSubmit={handleSubmit}
-                  onNewChat={() => router.push('/super-chat')}
+                  onNewChat={() => router.push('/chats/new')}
                   models={homeModels}
                   modelId={selectedModel.id}
                   thinkingByModel={selection.thinkingByModel}

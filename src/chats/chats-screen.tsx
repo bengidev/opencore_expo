@@ -60,7 +60,7 @@ function NewChatButton() {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel="Start a new chat"
-      onPress={() => router.push('/super-chat')}
+      onPress={() => router.push('/chats/new')}
       onPressIn={() => {
         setPressed(true);
         void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});

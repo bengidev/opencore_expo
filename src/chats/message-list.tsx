@@ -2,9 +2,9 @@ import { useEffect, useRef } from 'react';
 import { Platform, StyleSheet, type ListRenderItem } from 'react-native';
 import Animated from 'react-native-reanimated';
 
-import { MessageBubble } from '@/super-chat/message-bubble';
+import { MessageBubble } from '@/chats/message-bubble';
 import { Spacing } from '@/constants/theme';
-import type { ChatMessage } from '@/super-chat/chat-message';
+import type { ChatMessage } from '@/chats/chat-message';
 
 export function MessageList({
   messages,

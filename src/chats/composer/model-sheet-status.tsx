@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import type { ModelCatalogStatus } from '@/super-chat/llm/use-model-catalog';
+import type { ModelCatalogStatus } from '@/chats/llm/use-model-catalog';
 
 type ModelSheetStatusProps = {
   status: ModelCatalogStatus;

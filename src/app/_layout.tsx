@@ -10,9 +10,7 @@ import { useEffect } from 'react';
 import { useColorScheme } from 'react-native';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 
-import { Colors } from '@/constants/theme';
 import { useAppFonts } from '@/hooks/use-app-fonts';
-import { hasNativeChrome, isAndroidMaterial } from '@/lib/ui-tier';
 
 SplashScreen.preventAutoHideAsync().catch(() => {
   // Fast refresh can call this after the splash is already gone.
@@ -21,7 +19,6 @@ SplashScreen.preventAutoHideAsync().catch(() => {
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const scheme = colorScheme === 'dark' ? 'dark' : 'light';
-  const colors = Colors[scheme];
   const [loaded, error] = useAppFonts();
 
   useEffect(() => {
@@ -41,32 +38,6 @@ export default function RootLayout() {
         <Stack>
           <Stack.Screen name="index" options={{ headerShown: false }} />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="super-chat"
-            options={{
-              title: 'OpenCore',
-              // Chats are opened from Home and from the Chats tab, so the back
-              // label cannot name one tab.
-              headerBackTitle: 'Back',
-              // Android draws its own Material 3 app bar in Compose — the native
-              // header reserves the status-bar inset twice on some devices, leaving
-              // the title in the middle of a tall white slab
-              // (react-native-screens#4737).
-              headerShown: !isAndroidMaterial,
-            }}>
-            {isAndroidMaterial ? null : (
-              <Stack.Header
-                style={{
-                  color: colors.text,
-                  shadowColor: 'transparent',
-                  // The native tiers draw their own bar material — the iOS 26 glass
-                  // bar and Android's Compose app bar (`AndroidAppBar`) — so the app
-                  // only paints a background where no native bar exists.
-                  ...(hasNativeChrome ? null : { backgroundColor: colors.background }),
-                }}
-              />
-            )}
-          </Stack.Screen>
           <Stack.Screen
             name="api-key"
             options={{ presentation: 'modal', title: 'OpenRouter API key' }}

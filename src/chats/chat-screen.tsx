@@ -15,16 +15,16 @@ import {
   readChatSeed,
   settleAssistantReply,
   settleStoppedReply,
-} from '@/super-chat/chat-state';
-import { createChatMessage, type ChatMessage } from '@/super-chat/chat-message';
-import { toChatTurns } from '@/super-chat/chat-turns';
-import { toHomeModel } from '@/super-chat/composer/chat-models';
-import { SuperChatComposer } from '@/super-chat/composer/super-chat-composer';
-import type { ChatStreamEvent } from '@/super-chat/llm/types';
-import { selectThinkingLevel } from '@/super-chat/llm/model-selection-store';
-import { useModelCatalog } from '@/super-chat/llm/use-model-catalog';
-import { MessageList } from '@/super-chat/message-list';
-import { useChatRequest } from '@/super-chat/use-chat-request';
+} from '@/chats/chat-state';
+import { createChatMessage, type ChatMessage } from '@/chats/chat-message';
+import { toChatTurns } from '@/chats/chat-turns';
+import { toHomeModel } from '@/chats/composer/chat-models';
+import { SuperChatComposer } from '@/chats/composer/super-chat-composer';
+import type { ChatStreamEvent } from '@/chats/llm/types';
+import { selectThinkingLevel } from '@/chats/llm/model-selection-store';
+import { useModelCatalog } from '@/chats/llm/use-model-catalog';
+import { MessageList } from '@/chats/message-list';
+import { useChatRequest } from '@/chats/use-chat-request';
 
 function elapsedSeconds(startedAt: number | null): number {
   if (startedAt === null) return 1;
@@ -34,7 +34,7 @@ function elapsedSeconds(startedAt: number | null): number {
 /** The reply currently receiving the stream, and when its trace began. */
 type ActiveReply = { id: string; startedAt: number };
 
-export function SuperChatScreen() {
+export function ChatScreen() {
   const insets = useSafeAreaInsets();
   const keyboardPadding = useKeyboardBottomPadding(
     Math.max(insets.bottom, Spacing.three),

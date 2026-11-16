@@ -3,8 +3,8 @@ import { buttonStyle, font, foregroundStyle } from '@expo/ui/swift-ui/modifiers'
 
 import { useTheme } from '@/hooks/use-theme';
 import { isIosGlass } from '@/lib/ui-tier';
-import type { ComposerControlVariant } from '@/super-chat/composer/composer-actions-trigger';
-import type { HomeModel } from '@/super-chat/composer/chat-models';
+import type { ComposerControlVariant } from '@/chats/composer/composer-actions-trigger';
+import type { HomeModel } from '@/chats/composer/chat-models';
 
 type ComposerModelTriggerProps = {
   model: HomeModel;
