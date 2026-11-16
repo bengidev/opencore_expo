@@ -1,4 +1,4 @@
-import type { ComposerFallbackIcon, ComposerSymbolName } from '@/super-chat/composer/symbols';
+import type { ComposerFallbackIcon, ComposerSymbolName } from '@/chats/composer/symbols';
 
 export type ComposerActionItem = {
   id: string;

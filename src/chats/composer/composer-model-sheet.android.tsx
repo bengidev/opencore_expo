@@ -27,9 +27,9 @@ import { StyleSheet, useWindowDimensions, type ImageSourcePropType } from 'react
 
 import { useMaterialTheme } from '@/hooks/use-material-theme';
 import { useTheme } from '@/hooks/use-theme';
-import type { ComposerControlVariant } from '@/super-chat/composer/composer-actions-trigger';
-import { ComposerModelTrigger } from '@/super-chat/composer/composer-model-trigger';
-import { ModelSheetStatus } from '@/super-chat/composer/model-sheet-status';
+import type { ComposerControlVariant } from '@/chats/composer/composer-actions-trigger';
+import { ComposerModelTrigger } from '@/chats/composer/composer-model-trigger';
+import { ModelSheetStatus } from '@/chats/composer/model-sheet-status';
 import {
   THINKING_LEVEL_LABELS,
   filterHomeModels,
@@ -37,9 +37,9 @@ import {
   type HomeModelAndroidIcon,
   type ModelCapabilityId,
   type ThinkingLevel,
-} from '@/super-chat/composer/chat-models';
-import { clampThinkingLevel } from '@/super-chat/llm/thinking';
-import type { ModelCatalogStatus } from '@/super-chat/llm/use-model-catalog';
+} from '@/chats/composer/chat-models';
+import { clampThinkingLevel } from '@/chats/llm/thinking';
+import type { ModelCatalogStatus } from '@/chats/llm/use-model-catalog';
 
 type ComposerModelSheetProps = {
   models: readonly HomeModel[];

@@ -15,11 +15,11 @@ import { useTheme } from '@/hooks/use-theme';
 import {
   filterComposerActions,
   type ComposerActionItem,
-} from '@/super-chat/composer/composer-actions';
+} from '@/chats/composer/composer-actions';
 import {
   ComposerActionsTrigger,
   type ComposerControlVariant,
-} from '@/super-chat/composer/composer-actions-trigger';
+} from '@/chats/composer/composer-actions-trigger';
 
 type ComposerActionsPopoverProps = {
   items: readonly ComposerActionItem[];

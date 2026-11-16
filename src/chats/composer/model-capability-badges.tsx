@@ -6,11 +6,11 @@ import { useTheme } from '@/hooks/use-theme';
 import {
   MODEL_CAPABILITIES,
   type HomeModel,
-} from '@/super-chat/composer/chat-models';
+} from '@/chats/composer/chat-models';
 import {
   CAPABILITY_BADGE_GAP,
   CAPABILITY_BADGE_SIZE,
-} from '@/super-chat/composer/model-sheet-metrics';
+} from '@/chats/composer/model-sheet-metrics';
 
 type ModelCapabilityBadgesProps = {
   model: HomeModel;

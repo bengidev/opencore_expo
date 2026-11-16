@@ -12,7 +12,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
-import { STREAM_REVEAL_MS, tokenizeStreamingText } from '@/super-chat/streaming-timing';
+import { STREAM_REVEAL_MS, tokenizeStreamingText } from '@/chats/streaming-timing';
 
 const EASE_SMOOTH_OUT = Easing.bezier(0.23, 1, 0.32, 1);
 

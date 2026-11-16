@@ -9,6 +9,7 @@ import { MaxContentWidth, Spacing } from '@/constants/theme';
 type TabScreenProps = {
   eyebrow: string;
   title: string;
+  action?: ReactNode;
   children: ReactNode;
 };
 
@@ -21,7 +22,7 @@ type TabScreenProps = {
  * wraps tab content in a `SafeAreaView` with the bottom edge, so only the top
  * inset is left for the header to take.
  */
-export function TabScreen({ eyebrow, title, children }: TabScreenProps) {
+export function TabScreen({ eyebrow, title, action, children }: TabScreenProps) {
   const insets = useSafeAreaInsets();
   const androidTopInset = Platform.OS === 'android' ? insets.top : 0;
 
@@ -33,12 +34,15 @@ export function TabScreen({ eyebrow, title, children }: TabScreenProps) {
         contentContainerStyle={styles.content}>
         <View style={styles.column}>
           <View style={[styles.header, { paddingTop: Spacing.four + androidTopInset }]}>
-            <ThemedText variant="label" themeColor="textSecondary">
-              {eyebrow}
-            </ThemedText>
-            <ThemedText variant="displayMd" themeColor="textDisplay" accessibilityRole="header">
-              {title}
-            </ThemedText>
+            <View style={styles.headerText}>
+              <ThemedText variant="label" themeColor="textSecondary">
+                {eyebrow}
+              </ThemedText>
+              <ThemedText variant="displayMd" themeColor="textDisplay" accessibilityRole="header">
+                {title}
+              </ThemedText>
+            </View>
+            {action}
           </View>
           {children}
         </View>
@@ -61,7 +65,14 @@ const styles = StyleSheet.create({
     maxWidth: MaxContentWidth,
   },
   header: {
-    gap: Spacing.one,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: Spacing.two,
     paddingBottom: Spacing.four,
+  },
+  headerText: {
+    flex: 1,
+    gap: Spacing.one,
   },
 });

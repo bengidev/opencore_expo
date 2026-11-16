@@ -8,7 +8,7 @@ import {
 
 import { Colors, Fonts, Radius, Spacing } from '@/constants/theme';
 import { Typography } from '@/constants/typography';
-import { normalizeMarkdownHtml } from '@/super-chat/markdown-normalize';
+import { normalizeMarkdownHtml } from '@/chats/markdown-normalize';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
 /**

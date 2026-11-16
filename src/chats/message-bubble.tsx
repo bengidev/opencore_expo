@@ -9,11 +9,11 @@ import { useThinkingOrbPreference } from '@/components/agent-activity/orb-style-
 import { ThemedText } from '@/components/themed-text';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import type { ChatMessage } from '@/super-chat/chat-message';
-import type { ChatErrorCode } from '@/super-chat/llm/types';
+import type { ChatMessage } from '@/chats/chat-message';
+import type { ChatErrorCode } from '@/chats/llm/types';
 // The mapping module shares this basename; the extension selects the component.
-import { ReasoningActivity } from '@/super-chat/reasoning-activity.tsx';
-import { MarkdownAnswer } from '@/super-chat/markdown-answer';
+import { ReasoningActivity } from '@/chats/reasoning-activity.tsx';
+import { MarkdownAnswer } from '@/chats/markdown-answer';
 
 const ENTER_MS = 200;
 /** Brief pause so the assistant reply reads as a follow-up, not simultaneous with the user send. */

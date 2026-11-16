@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -15,16 +15,17 @@ import {
   readChatSeed,
   settleAssistantReply,
   settleStoppedReply,
-} from '@/super-chat/chat-state';
-import { createChatMessage, type ChatMessage } from '@/super-chat/chat-message';
-import { toChatTurns } from '@/super-chat/chat-turns';
-import { toHomeModel } from '@/super-chat/composer/chat-models';
-import { SuperChatComposer } from '@/super-chat/composer/super-chat-composer';
-import type { ChatStreamEvent } from '@/super-chat/llm/types';
-import { selectThinkingLevel } from '@/super-chat/llm/model-selection-store';
-import { useModelCatalog } from '@/super-chat/llm/use-model-catalog';
-import { MessageList } from '@/super-chat/message-list';
-import { useChatRequest } from '@/super-chat/use-chat-request';
+} from '@/chats/chat-state';
+import { createChatMessage, type ChatMessage } from '@/chats/chat-message';
+import { toChatTurns } from '@/chats/chat-turns';
+import { toHomeModel } from '@/chats/composer/chat-models';
+import { SuperChatComposer } from '@/chats/composer/super-chat-composer';
+import type { ChatStreamEvent } from '@/chats/llm/types';
+import { selectThinkingLevel } from '@/chats/llm/model-selection-store';
+import { useModelCatalog } from '@/chats/llm/use-model-catalog';
+import { MessageList } from '@/chats/message-list';
+import { useChatHistory } from '@/chats/history/use-chat-history';
+import { useChatRequest } from '@/chats/use-chat-request';
 
 function elapsedSeconds(startedAt: number | null): number {
   if (startedAt === null) return 1;
@@ -34,19 +35,24 @@ function elapsedSeconds(startedAt: number | null): number {
 /** The reply currently receiving the stream, and when its trace began. */
 type ActiveReply = { id: string; startedAt: number };
 
-export function SuperChatScreen() {
+export function ChatScreen() {
   const insets = useSafeAreaInsets();
   const keyboardPadding = useKeyboardBottomPadding(
     Math.max(insets.bottom, Spacing.three),
     Spacing.three,
   );
-  const { seed } = useLocalSearchParams<{ seed?: string }>();
+  const { id, seed } = useLocalSearchParams<{ id?: string; seed?: string }>();
   const appliedSeedRef = useRef<string | null>(null);
   const activeReplyRef = useRef<ActiveReply | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>(createInitialChatMessages);
+  const { messages, commit: commitHistory, persist, conversationId, isHydrating } =
+    useChatHistory(id);
   // The send and retry paths need the thread synchronously, before React has
   // committed the last delta; the state mirror alone is one render behind.
   const messagesRef = useRef(messages);
+  useEffect(() => {
+    // Hydration replaces the thread without going through `commit`.
+    messagesRef.current = messages;
+  }, [messages]);
   const [draft, setDraft] = useState('');
   const {
     provider,
@@ -67,10 +73,13 @@ export function SuperChatScreen() {
     thinking,
   });
 
-  const commit = useCallback((next: ChatMessage[]) => {
-    messagesRef.current = next;
-    setMessages(next);
-  }, []);
+  const commit = useCallback(
+    (next: ChatMessage[]) => {
+      messagesRef.current = next;
+      commitHistory(next);
+    },
+    [commitHistory],
+  );
 
   const handleModelSelect = useCallback(
     (id: string) => {
@@ -127,17 +136,27 @@ export function SuperChatScreen() {
 
       const withUser = appendUserMessage(settled, trimmed);
       if (withUser === settled) return;
+      // The question reaches disk before the answer starts; the blank reply the
+      // next line appends is dropped on write.
+      persist();
       startReply(withUser);
     },
-    [abort, startReply],
+    [abort, persist, startReply],
   );
 
   const handleNewChat = useCallback(() => {
     abort();
     activeReplyRef.current = null;
-    commit(createInitialChatMessages());
     setDraft('');
-  }, [abort, commit]);
+    // With an id, clearing in place would keep the loaded id and overwrite the
+    // stored thread on the next send. Without one, this screen already is
+    // `/chats/new`, so clearing cannot touch anything on disk.
+    if (id) {
+      router.replace('/chats/new');
+      return;
+    }
+    commit(createInitialChatMessages());
+  }, [abort, commit, id]);
 
   /**
    * Stop the live reply the same way a new message interrupts it: abort the
@@ -187,7 +206,11 @@ export function SuperChatScreen() {
     <ThemedView style={styles.screen}>
       <AndroidAppBar title="OpenCore" />
       <Animated.View style={[styles.column, keyboardPadding]}>
-        <MessageList messages={messages} onRetry={retryMessage} />
+        <MessageList
+          messages={messages}
+          onRetry={retryMessage}
+          hydrateKey={isHydrating ? null : (conversationId ?? 'new')}
+        />
         <View style={styles.composer}>
           <SuperChatComposer
             draft={draft}

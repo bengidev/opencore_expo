@@ -10,19 +10,19 @@ import {
   filterHomeModels,
   type HomeModel,
   type ThinkingLevel,
-} from '@/super-chat/composer/chat-models';
-import { ModelCapabilityBadges } from '@/super-chat/composer/model-capability-badges';
+} from '@/chats/composer/chat-models';
+import { ModelCapabilityBadges } from '@/chats/composer/model-capability-badges';
 import {
   ROW_NAME_LINE_HEIGHT,
   ROW_TRAILING_INSET,
   THINKING_TRIGGER_GAP,
   THINKING_TRIGGER_HEIGHT,
   THINKING_TRIGGER_WIDTH,
-} from '@/super-chat/composer/model-sheet-metrics';
-import { ModelSheetStatus } from '@/super-chat/composer/model-sheet-status';
-import { ThinkingLevelControl } from '@/super-chat/composer/model-thinking-control';
-import { clampThinkingLevel } from '@/super-chat/llm/thinking';
-import type { ModelCatalogStatus } from '@/super-chat/llm/use-model-catalog';
+} from '@/chats/composer/model-sheet-metrics';
+import { ModelSheetStatus } from '@/chats/composer/model-sheet-status';
+import { ThinkingLevelControl } from '@/chats/composer/model-thinking-control';
+import { clampThinkingLevel } from '@/chats/llm/thinking';
+import type { ModelCatalogStatus } from '@/chats/llm/use-model-catalog';
 
 type ModelSheetContentProps = {
   models: readonly HomeModel[];
