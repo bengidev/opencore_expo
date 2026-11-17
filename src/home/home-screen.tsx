@@ -3,7 +3,7 @@ import { PanelUIProvider } from 'panelui-native/provider';
 import { useCallback, useMemo, useState } from 'react';
 import { Dimensions, Platform, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated from 'react-native-reanimated';
-import { initialWindowMetrics, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { KeyboardDismissSurface, dismissKeyboard } from '@/components/keyboard-dismiss-surface';
 import { ThemedView } from '@/components/themed-view';
@@ -76,12 +76,9 @@ export function HomeScreen() {
   function measureReservedBottom(event: LayoutChangeEvent) {
     if (Platform.OS !== 'android') return;
 
-    const topInset = initialWindowMetrics?.insets.top ?? 0;
     const screenHeight = Dimensions.get('screen').height;
 
-    setReservedBottom(
-      Math.max(0, Math.round(screenHeight - topInset - event.nativeEvent.layout.height)),
-    );
+    setReservedBottom(Math.max(0, Math.round(screenHeight - event.nativeEvent.layout.height)));
   }
 
   function handleSuggestionSelect(suggestion: HomeSuggestion) {

@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Dimensions, Platform, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -37,9 +37,11 @@ type ActiveReply = { id: string; startedAt: number };
 
 export function ChatScreen() {
   const insets = useSafeAreaInsets();
+  const [reservedBottom, setReservedBottom] = useState(0);
   const keyboardPadding = useKeyboardBottomPadding(
     Math.max(insets.bottom, Spacing.three),
     Spacing.three,
+    reservedBottom,
   );
   const { id, seed } = useLocalSearchParams<{ id?: string; seed?: string }>();
   const appliedSeedRef = useRef<string | null>(null);
@@ -202,8 +204,21 @@ export function ChatScreen() {
     sendMessage(trimmed);
   }, [seed, sendMessage]);
 
+  /**
+   * Android's tab router lays the screen out between the status bar and the
+   * native tab bar, so the view ends one tab bar above the window edge while
+   * the keyboard height is measured from that edge. Measure the strip the view
+   * does not cover, or the composer floats a tab bar's height above the keys.
+   */
+  const measureReservedBottom = useCallback((event: LayoutChangeEvent) => {
+    if (Platform.OS !== 'android') return;
+
+    const screenHeight = Dimensions.get('screen').height;
+    setReservedBottom(Math.max(0, Math.round(screenHeight - event.nativeEvent.layout.height)));
+  }, []);
+
   return (
-    <ThemedView style={styles.screen}>
+    <ThemedView style={styles.screen} onLayout={measureReservedBottom}>
       <AndroidAppBar title="OpenCore" />
       <Animated.View style={[styles.column, keyboardPadding]}>
         <MessageList
